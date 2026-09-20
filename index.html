@@ -711,20 +711,22 @@ let aiPeriod='day',aiResult='';
 const SB_URL='https://wblndotsbuejihjembjz.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndibG5kb3RzYnVlamloamVtYmp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MTczODksImV4cCI6MjEwNTQ5MzM4OX0.BvPUSn3afCpe5LkhIcygwENtf6pNZPGfvRDLR2Q1eBQ';
 
-async function sbFetch(table,method='GET',body=null,query=''){
+async function sbFetch(table,method='GET',body=null,query='',prefer='return=minimal'){
+  const headers={
+    'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,
+    'Content-Type':'application/json'
+  };
+  if(prefer)headers['Prefer']=prefer;
   const res=await fetch(`${SB_URL}/rest/v1/${table}${query}`,{
-    method,headers:{
-      'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,
-      'Content-Type':'application/json','Prefer':'return=minimal'
-    },body:body?JSON.stringify(body):null
+    method,headers,body:body?JSON.stringify(body):null
   });
-  if(!res.ok)throw new Error(await res.text());
+  if(!res.ok){const t=await res.text();console.error('SB error:',t);throw new Error(t);}
   return method==='GET'?res.json():true;
 }
 
-async function sbLoad(table){return sbFetch(table,'GET',null,'?order=id.desc&limit=1000');}
-async function sbUpsert(table,row){return sbFetch(table,'POST',row,'?on_conflict=id');}
-async function sbDelete(table,id){return sbFetch(table,'DELETE',null,`?id=eq.${id}`);}
+async function sbLoad(table){return sbFetch(table,'GET',null,'?order=id.desc&limit=1000','');}
+async function sbUpsert(table,row){return sbFetch(table,'POST',row,'?on_conflict=id','resolution=merge-duplicates,return=minimal');}
+async function sbDelete(table,id){return sbFetch(table,'DELETE',null,`?id=eq.${id}`,'');}
 
 function toRow(r){
   return{
@@ -738,15 +740,16 @@ function toRow(r){
     note:r.note||''
   };
 }
+function safeJSON(s,def){try{return s?JSON.parse(s):def;}catch(e){return def;}}
 function fromRow(r){
   return{
     id:r.id,ts:r.ts,foot:r.foot||'left',
-    zones:JSON.parse(r.zones||'[]'),
-    zoneLabels:JSON.parse(r.zone_labels||'[]'),
-    zonePain:JSON.parse(r.zone_pain||'{}'),
+    zones:safeJSON(r.zones,[]),
+    zoneLabels:safeJSON(r.zone_labels,safeJSON(r.zoneLabels,[])),
+    zonePain:safeJSON(r.zone_pain,safeJSON(r.zonePain,{})),
     pain:r.pain||5,
-    types:JSON.parse(r.types||'[]'),
-    situations:JSON.parse(r.situations||'[]'),
+    types:safeJSON(r.types,[]),
+    situations:safeJSON(r.situations,[]),
     note:r.note||''
   };
 }
@@ -784,13 +787,13 @@ function fromHospRow(h){
       for(const h of hosps){try{await sbUpsert('hosps',toHospRow(h));}catch(e){}}
     }
     document.getElementById('sync-st').textContent='☁️ 클라우드';
-    renderHome();renderHosp();
   }catch(e){
     console.error('Supabase 연결 실패:',e);
     document.getElementById('sync-st').textContent='💾 로컬저장';
   }
+  // 최종 렌더 (데이터 로드 완료 후)
+  renderHome();renderHosp();
   tick();setInterval(tick,1000);
-  renderHome();
 })();
 
 function p2(n){return String(n).padStart(2,'0');}
