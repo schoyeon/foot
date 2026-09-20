@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>발 통증 일기</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#F0EDE6;--surf:#fff;--surf2:#F7F4EF;
+  --ink:#1C1917;--ink2:#6B6560;--ink3:#A09B96;
+  --acc:#2563EB;--acc-s:#EFF4FF;
+  --red:#DC2626;--red-s:#FEF2F2;
+  --grn:#16A34A;--grn-s:#F0FDF4;
+  --border:#E5E1DB;--r:14px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#111;--surf:#1C1C1A;--surf2:#252523;
+  --ink:#EEE;--ink2:#A09B96;--ink3:#6B6560;
+  --border:#2E2E2B;--acc-s:#1E2A3A;
+}}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--ink);}
+
+/* 레이아웃 */
+#app{max-width:430px;margin:0 auto;min-height:100vh;}
+.page{display:none;padding:0 0 80px;}
+.page.show{display:block;}
+
+/* 하단 탭바 */
+#tabbar{
+  position:fixed;bottom:0;left:0;right:0;
+  max-width:430px;margin:0 auto;
+  background:var(--surf);
+  border-top:1px solid var(--border);
+  display:flex;
+  padding-bottom:env(safe-area-inset-bottom,0);
+  z-index:999;
+}
+.tab{
+  flex:1;padding:8px 4px 10px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  font-size:10px;font-weight:500;color:var(--ink3);
+  background:none;border:none;cursor:pointer;
+}
+.tab.on{color:var(--acc);}
+.tab-ico{font-size:20px;line-height:1.3;}
+.tab-plus{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:6px 4px 8px;background:none;border:none;cursor:pointer;
+}
+.plus-circle{
+  width:44px;height:44px;border-radius:50%;
+  background:var(--acc);color:#fff;
+  font-size:26px;line-height:44px;text-align:center;
+  box-shadow:0 2px 10px rgba(37,99,235,.4);
+}
+
+/* 공통 */
+.card{background:var(--surf);border-radius:var(--r);border:1px solid var(--border);margin:10px 16px 0;overflow:hidden;}
+.card-title{padding:14px 16px 0;font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;}
+.card-body{padding:12px 16px 14px;}
+.section-header{display:flex;justify-content:space-between;align-items:center;padding:18px 16px 8px;}
+
+/* 홈 */
+.today-banner{margin:14px 16px 0;border-radius:var(--r);background:var(--acc);color:#fff;padding:18px;}
+.today-banner .lbl{font-size:11px;font-weight:600;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.today-stats{display:flex;gap:20px;}
+.today-stat .n{font-size:30px;font-weight:700;}
+.today-stat .l{font-size:12px;opacity:.7;margin-top:2px;}
+.copy-btn{margin-top:12px;background:rgba(255,255,255,.2);border:none;color:#fff;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;}
+.week-strip{display:flex;gap:5px;padding:14px 16px 0;}
+.week-day{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.week-day-name{font-size:10px;color:var(--ink3);}
+.week-dot{width:30px;height:30px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--ink3);}
+.week-dot.today{box-shadow:0 0 0 2px var(--acc);}
+.rec-card{background:var(--surf);border-radius:12px;border:1px solid var(--border);margin:0 16px 8px;padding:13px;display:flex;gap:12px;align-items:center;cursor:pointer;}
+.rec-time{font-size:12px;font-weight:600;color:var(--ink3);min-width:38px;}
+.rec-body{flex:1;}
+.rec-zones{font-size:13px;font-weight:500;margin-bottom:3px;}
+.rec-tags{display:flex;gap:4px;flex-wrap:wrap;}
+.tag{font-size:11px;background:var(--surf2);padding:2px 8px;border-radius:20px;color:var(--ink2);}
+.pain-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+
+/* 기록 폼 */
+.form-lbl{font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.foot-pills{display:flex;gap:7px;}
+.fpill{flex:1;padding:10px;border-radius:30px;border:1.5px solid var(--border);background:var(--surf2);font-size:13px;font-weight:500;text-align:center;cursor:pointer;color:var(--ink2);}
+.fpill.on{background:var(--acc-s);border-color:var(--acc);color:var(--acc);}
+/* SVG */
+.fz{cursor:pointer;}
+.fz:hover{opacity:.75;}
+.fz[data-on="1"]{fill:#BFCFFE!important;stroke:#2563EB!important;stroke-width:2px!important;}
+/* zone chips */
+.zone-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.zc{padding:7px 11px;border-radius:20px;border:1.5px solid var(--border);background:var(--surf2);font-size:12px;cursor:pointer;color:var(--ink2);display:flex;align-items:center;gap:5px;}
+.zc.on{background:var(--acc-s);border-color:var(--acc);color:var(--acc);}
+.zdot{width:6px;height:6px;border-radius:50%;background:var(--border);flex-shrink:0;}
+.zc.on .zdot{background:var(--acc);}
+.z-sec{font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;width:100%;margin-top:6px;}
+/* pain slider */
+.pain-row{display:flex;align-items:center;gap:12px;}
+.pain-row input[type=range]{flex:1;accent-color:var(--acc);}
+.pain-badge{min-width:48px;height:36px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;background:var(--surf2);color:var(--ink3);}
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{padding:7px 13px;border-radius:20px;border:1.5px solid var(--border);background:var(--surf2);font-size:12px;cursor:pointer;color:var(--ink2);}
+.chip.on{border-color:var(--ink2);color:var(--ink);font-weight:500;}
+.schip{padding:7px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--surf2);font-size:12px;cursor:pointer;color:var(--ink2);}
+.schip.on{background:var(--acc-s);border-color:var(--acc);color:var(--acc);}
+.sit-grp{margin-bottom:12px;}
+.sit-grp-lbl{font-size:11px;font-weight:600;color:var(--ink3);margin-bottom:6px;}
+textarea{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit;background:var(--surf2);color:var(--ink);resize:none;outline:none;height:70px;}
+textarea:focus{border-color:var(--acc);}
+.big-btn{display:block;width:calc(100% - 32px);margin:12px 16px 0;padding:14px;border-radius:40px;background:var(--acc);color:#fff;border:none;font-size:15px;font-weight:600;cursor:pointer;text-align:center;}
+.outline-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:calc(100% - 32px);margin:10px 16px 0;padding:12px;border-radius:40px;border:1.5px solid var(--border);background:var(--surf);font-size:14px;font-weight:500;cursor:pointer;color:var(--ink2);}
+
+/* 히스토리 */
+.hview{display:flex;background:var(--surf2);border-radius:20px;padding:3px;gap:2px;}
+.hvt{padding:5px 12px;border-radius:16px;font-size:12px;font-weight:500;cursor:pointer;color:var(--ink3);}
+.hvt.on{background:var(--surf);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+/* 캘린더 */
+.cal-wrap{margin:12px 16px 0;background:var(--surf);border-radius:var(--r);border:1px solid var(--border);padding:14px;}
+.cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.cal-nav button{background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink2);padding:2px 8px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-dn{font-size:10px;color:var(--ink3);text-align:center;padding-bottom:3px;}
+.cal-c{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;cursor:pointer;color:var(--ink3);}
+.cal-c.has{color:#fff;font-weight:600;}
+.cal-c.today{box-shadow:0 0 0 2px var(--acc);}
+.cal-c.sel{outline:2px solid var(--acc);outline-offset:1px;}
+.cal-legend{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;}
+.cal-li{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--ink3);}
+.cal-ld{width:10px;height:10px;border-radius:3px;}
+/* 타임라인 */
+.tl-day{margin:14px 16px 0;}
+.tl-dlbl{font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;}
+.tl-card{background:var(--surf);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;}
+.tl-bar-area{padding:14px 14px 8px;}
+.tl-track{height:8px;background:var(--surf2);border-radius:4px;position:relative;}
+.tl-seg{position:absolute;top:0;height:8px;border-radius:3px;opacity:.75;}
+.tl-dot{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;border:2.5px solid var(--surf);transform:translateX(-50%);box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.tl-ax{display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-top:4px;}
+.tl-toggle{padding:10px 14px;font-size:12px;color:var(--acc);cursor:pointer;border-top:1px solid var(--border);background:var(--surf2);}
+.tl-entries{display:none;border-top:1px solid var(--border);}
+.tl-entries.open{display:block;}
+.te{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);align-items:flex-start;}
+.te:last-child{border-bottom:none;}
+.te-l{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:44px;}
+.te-time{font-size:12px;font-weight:600;}
+.te-pbadge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px;}
+.te-b{flex:1;}
+.te-foot{display:inline-block;font-size:11px;background:var(--acc-s);color:var(--acc);padding:2px 7px;border-radius:7px;font-weight:500;margin-bottom:4px;}
+.te-zones{font-size:12px;color:var(--ink2);line-height:1.45;}
+.te-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
+.te-tag{font-size:11px;background:var(--surf2);padding:2px 7px;border-radius:7px;color:var(--ink3);}
+.te-note{font-size:12px;color:var(--ink3);margin-top:4px;font-style:italic;}
+.te-edit{background:none;border:none;cursor:pointer;color:var(--ink3);padding:2px 4px;font-size:16px;flex-shrink:0;}
+
+/* 통계 */
+.big-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 16px 0;}
+.big-cell{background:var(--surf);border-radius:12px;border:1px solid var(--border);padding:14px;}
+.big-n{font-size:26px;font-weight:700;color:var(--acc);}
+.big-l{font-size:12px;color:var(--ink3);margin-top:3px;}
+.stat-card{margin:10px 16px 0;background:var(--surf);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;}
+.stat-head{padding:13px 16px;font-size:13px;font-weight:600;border-bottom:1px solid var(--border);}
+.bar-row{display:flex;align-items:center;padding:8px 16px;gap:10px;}
+.bar-lbl{font-size:12.5px;min-width:88px;color:var(--ink);}
+.bar-track{flex:1;height:5px;background:var(--surf2);border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;}
+.bar-val{font-size:11px;color:var(--ink3);min-width:22px;text-align:right;}
+
+/* AI */
+.ai-periods{display:flex;gap:6px;padding:14px 16px 0;}
+.aip{flex:1;padding:8px 4px;border-radius:20px;border:1.5px solid var(--border);background:var(--surf);font-size:13px;font-weight:500;cursor:pointer;color:var(--ink2);text-align:center;}
+.aip.on{background:var(--acc-s);border-color:var(--acc);color:var(--acc);}
+.ai-result{margin:12px 16px 0;background:var(--surf);border-radius:var(--r);border:1px solid var(--border);padding:16px;font-size:14px;line-height:1.8;color:var(--ink);}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid #bfcffe;border-top-color:var(--acc);border-radius:50%;animation:sp .6s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* 병원 */
+.hosp-item{padding:13px 16px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:flex-start;cursor:pointer;}
+.hosp-dlbl{font-size:12px;font-weight:600;color:var(--ink);min-width:62px;}
+.hosp-body{flex:1;}
+.hosp-dept{font-size:11px;color:var(--acc);background:var(--acc-s);padding:2px 8px;border-radius:10px;display:inline-block;margin-bottom:3px;}
+.hosp-diag{font-size:12.5px;font-weight:500;color:var(--ink);margin-bottom:3px;}
+.hosp-treats{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+.hosp-treat{font-size:11px;background:var(--grn-s);color:var(--grn);padding:2px 8px;border-radius:8px;font-weight:500;}
+.hosp-note{font-size:11.5px;color:var(--ink3);margin-top:4px;font-style:italic;}
+.hosp-next{font-size:11px;color:#D97706;background:#FFFBEB;padding:2px 8px;border-radius:8px;margin-top:4px;display:inline-block;}
+.hosp-pdot{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+
+/* 수정 모달 */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;}
+.overlay.show{display:flex;}
+.sheet{background:var(--surf);border-radius:20px 20px 0 0;width:100%;max-width:430px;padding:20px;max-height:92vh;overflow-y:auto;padding-bottom:calc(24px + env(safe-area-inset-bottom,0));}
+.sheet-title{font-size:17px;font-weight:700;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.sheet-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink3);padding:0 4px;}
+.sheet-lbl{font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 7px;}
+.sheet-lbl:first-of-type{margin-top:0;}
+.sheet-input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;background:var(--surf2);color:var(--ink);outline:none;}
+.sheet-input:focus{border-color:var(--acc);}
+.sheet-btns{display:flex;gap:8px;margin-top:16px;}
+.btn-del{flex:1;padding:13px;border-radius:40px;background:var(--red-s);color:var(--red);border:none;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-save{flex:2;padding:13px;border-radius:40px;background:var(--acc);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-save-only{flex:1;padding:13px;border-radius:40px;background:var(--acc);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;}
+
+/* toast */
+.toast{position:fixed;bottom:calc(76px + env(safe-area-inset-bottom,0));left:50%;transform:translateX(-50%) translateY(60px);background:#1c1917;color:#fff;padding:11px 20px;border-radius:40px;font-size:13px;font-weight:500;transition:transform .22s,opacity .22s;z-index:99999;pointer-events:none;white-space:nowrap;opacity:0;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.empty{text-align:center;padding:48px 20px;color:var(--ink3);font-size:14px;line-height:1.7;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- 홈 -->
+<div class="page show" id="p-home">
+  <div style="padding:20px 16px 0;display:flex;justify-content:space-between;align-items:flex-start;">
+    <div>
+      <div style="font-size:22px;font-weight:700;" id="greet">안녕하세요 👋</div>
+      <div style="font-size:13px;color:var(--ink3);margin-top:2px;" id="hdate"></div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:13px;color:var(--ink3);font-variant-numeric:tabular-nums;" id="htime"></div>
+      <div style="font-size:10px;color:var(--ink3);margin-top:2px;" id="sync-st"></div>
+    </div>
+  </div>
+  <div class="today-banner">
+    <div class="lbl">오늘 통증 요약</div>
+    <div id="today-content"></div>
+  </div>
+  <div class="week-strip" id="week-strip"></div>
+  <div class="section-header">
+    <div style="font-size:15px;font-weight:600;">최근 기록</div>
+    <div style="font-size:13px;color:var(--acc);cursor:pointer;" onclick="showPage('history')">전체보기</div>
+  </div>
+  <div id="home-recs"></div>
+  <div style="height:8px;"></div>
+</div>
+
+<!-- 기록 폼 -->
+<div class="page" id="p-log">
+  <div style="padding:20px 16px 0;display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:20px;font-weight:700;">통증 기록</div>
+    <button class="big-btn" style="width:auto;margin:0;padding:8px 18px;font-size:13px;" onclick="saveRec()">저장</button>
+  </div>
+  <div style="padding:8px 16px 0;">
+    <div class="form-lbl">날짜 · 시간 <span style="font-weight:400;font-size:10px;text-transform:none;letter-spacing:0;">(과거 기록도 가능)</span></div>
+    <div style="display:flex;gap:8px;">
+      <input type="date" id="rd" class="sheet-input" style="flex:1;">
+      <input type="time" id="rt" class="sheet-input" style="flex:1;">
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">어느 발?</div>
+    <div class="card-body">
+      <div class="foot-pills">
+        <div class="fpill on" id="fp-left" onclick="setFoot('left')">👣 왼발</div>
+        <div class="fpill" id="fp-right" onclick="setFoot('right')">👣 오른발</div>
+        <div class="fpill" id="fp-both" onclick="setFoot('both')">양쪽</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">아픈 부위</div>
+    <div class="card-body" style="padding-top:8px;">
+      <div style="display:flex;justify-content:center;padding:4px 0 12px;">
+        <svg width="170" viewBox="0 0 220 340" xmlns="http://www.w3.org/2000/svg">
+          <style>
+            .fb{fill:#f0ede6;stroke:#d4c8b8;stroke-width:1.5;}
+            @media(prefers-color-scheme:dark){.fb{fill:#2a2825;stroke:#3a3632;}}
+            .fl{font-family:-apple-system,sans-serif;font-size:9px;fill:#8a7e6e;text-anchor:middle;pointer-events:none;font-weight:500;}
+            .fz{cursor:pointer;}
+            .fz[data-on="1"]{fill:#BFCFFE!important;stroke:#2563EB!important;stroke-width:2px!important;}
+          </style>
+          <path class="fb" d="M66,280 C46,276 38,254 36,228 C34,196 36,158 40,132 C44,108 54,90 68,78 C78,70 92,66 106,66 C120,66 132,70 142,80 C156,92 164,112 168,140 C172,168 172,204 170,234 C168,260 158,280 140,286 C124,292 84,284 66,280 Z"/>
+          <ellipse id="fz-heel" class="fz fb" cx="104" cy="266" rx="50" ry="28" onclick="tzClick('heel')"/>
+          <path id="fz-arch" class="fz fb" d="M36,222 C34,194 36,158 40,134 C44,112 54,94 68,80 L76,88 C62,100 54,120 50,144 C46,168 44,200 46,226 Z" onclick="tzClick('arch')"/>
+          <ellipse id="fz-ball" class="fz fb" cx="106" cy="88" rx="58" ry="20" onclick="tzClick('ball')"/>
+          <rect id="fz-toe1" class="fz fb" x="44" y="24" width="38" height="50" rx="19" onclick="tzClick('toe1')"/>
+          <rect id="fz-toe2" class="fz fb" x="84" y="14" width="27" height="46" rx="13" onclick="tzClick('toe2')"/>
+          <rect id="fz-toe3" class="fz fb" x="113" y="12" width="23" height="44" rx="11" onclick="tzClick('toe3')"/>
+          <rect id="fz-toe4" class="fz fb" x="138" y="20" width="20" height="38" rx="10" onclick="tzClick('toe4')"/>
+          <rect id="fz-toe5" class="fz fb" x="160" y="30" width="16" height="32" rx="8" onclick="tzClick('toe5')"/>
+          <circle id="fz-gap1" class="fz" fill="#e4dfd8" stroke="#d4c8b8" stroke-width="1" cx="82" cy="72" r="8" onclick="tzClick('gap1')"/>
+          <circle id="fz-gap2" class="fz" fill="#e4dfd8" stroke="#d4c8b8" stroke-width="1" cx="110" cy="68" r="7" onclick="tzClick('gap2')"/>
+          <circle id="fz-gap3" class="fz" fill="#e4dfd8" stroke="#d4c8b8" stroke-width="1" cx="134" cy="70" r="6" onclick="tzClick('gap3')"/>
+          <circle id="fz-gap4" class="fz" fill="#e4dfd8" stroke="#d4c8b8" stroke-width="1" cx="156" cy="76" r="6" onclick="tzClick('gap4')"/>
+          <rect id="fz-ai" class="fz fb" x="24" y="298" width="48" height="16" rx="8" onclick="tzClick('ankle-inner')"/>
+          <rect id="fz-af" class="fz fb" x="78" y="298" width="46" height="16" rx="8" onclick="tzClick('ankle-front')"/>
+          <rect id="fz-ao" class="fz fb" x="130" y="298" width="54" height="16" rx="8" onclick="tzClick('ankle-outer')"/>
+          <text x="63" y="52" class="fl">엄지</text><text x="97" y="42" class="fl">검지</text><text x="124" y="39" class="fl">중지</text><text x="148" y="44" class="fl">약지</text><text x="168" y="54" class="fl">소지</text>
+          <text x="106" y="92" class="fl">발볼</text><text x="26" y="182" class="fl" transform="rotate(-90,26,182)">아치</text><text x="104" y="271" class="fl">뒤꿈치</text>
+          <text x="48" y="311" class="fl">안쪽</text><text x="101" y="311" class="fl">앞</text><text x="157" y="311" class="fl">바깥</text>
+        </svg>
+      </div>
+      <div style="text-align:center;margin-bottom:10px;">
+        <div class="zc" id="zc-ankle-back" onclick="tzClick('ankle-back')" style="display:inline-flex;"><div class="zdot"></div>발목 뒤 (아킬레스)</div>
+      </div>
+      <div class="zone-chips">
+        <div class="z-sec">발가락</div>
+        <div class="zc" id="zc-toe1" onclick="tzClick('toe1')"><div class="zdot"></div>엄지</div>
+        <div class="zc" id="zc-toe2" onclick="tzClick('toe2')"><div class="zdot"></div>검지</div>
+        <div class="zc" id="zc-toe3" onclick="tzClick('toe3')"><div class="zdot"></div>중지</div>
+        <div class="zc" id="zc-toe4" onclick="tzClick('toe4')"><div class="zdot"></div>약지</div>
+        <div class="zc" id="zc-toe5" onclick="tzClick('toe5')"><div class="zdot"></div>소지</div>
+        <div class="z-sec">사이</div>
+        <div class="zc" id="zc-gap1" onclick="tzClick('gap1')"><div class="zdot"></div>1-2</div>
+        <div class="zc" id="zc-gap2" onclick="tzClick('gap2')"><div class="zdot"></div>2-3</div>
+        <div class="zc" id="zc-gap3" onclick="tzClick('gap3')"><div class="zdot"></div>3-4</div>
+        <div class="zc" id="zc-gap4" onclick="tzClick('gap4')"><div class="zdot"></div>4-5</div>
+        <div class="z-sec">발바닥·발등</div>
+        <div class="zc" id="zc-ball" onclick="tzClick('ball')"><div class="zdot"></div>발볼</div>
+        <div class="zc" id="zc-arch" onclick="tzClick('arch')"><div class="zdot"></div>아치</div>
+        <div class="zc" id="zc-heel" onclick="tzClick('heel')"><div class="zdot"></div>뒤꿈치</div>
+        <div class="zc" id="zc-top" onclick="tzClick('top')"><div class="zdot"></div>발등</div>
+        <div class="z-sec">발목</div>
+        <div class="zc" id="zc-ankle-front" onclick="tzClick('ankle-front')"><div class="zdot"></div>발목 앞</div>
+        <div class="zc" id="zc-ankle-inner" onclick="tzClick('ankle-inner')"><div class="zdot"></div>발목 안쪽</div>
+        <div class="zc" id="zc-ankle-outer" onclick="tzClick('ankle-outer')"><div class="zdot"></div>발목 바깥쪽</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">통증 강도</div>
+    <div class="card-body">
+      <div class="pain-row">
+        <input type="range" id="pain-slider" min="1" max="10" value="5" oninput="onPainSlide(+this.value)">
+        <div class="pain-badge" id="pain-badge">–</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-top:5px;"><span>1 없음</span><span>5 보통</span><span>10 극심</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">통증 유형</div>
+    <div class="card-body">
+      <div class="chips">
+        <div class="chip" onclick="this.classList.toggle('on')">욱신욱신</div>
+        <div class="chip" onclick="this.classList.toggle('on')">저림</div>
+        <div class="chip" onclick="this.classList.toggle('on')">뻐근함</div>
+        <div class="chip" onclick="this.classList.toggle('on')">아침 첫 발딛기</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">언제 아파요?</div>
+    <div class="card-body">
+      <div class="sit-grp"><div class="sit-grp-lbl">활동</div><div class="chips">
+        <div class="schip" onclick="this.classList.toggle('on')">🚶 걸을 때</div>
+        <div class="schip" onclick="this.classList.toggle('on')">🪑 앉아있을 때</div>
+        <div class="schip" onclick="this.classList.toggle('on')">🧍 서있을 때</div>
+        <div class="schip" onclick="this.classList.toggle('on')">🏃 뛸 때</div>
+        <div class="schip" onclick="this.classList.toggle('on')">🧘 누워있을 때</div>
+        <div class="schip" onclick="this.classList.toggle('on')">🏋️ 운동할 때</div>
+        <div class="schip" onclick="this.classList.toggle('on')">⛹️ 놀 때</div>
+      </div></div>
+      <div class="sit-grp"><div class="sit-grp-lbl">발 상태</div><div class="chips">
+        <div class="schip" onclick="this.classList.toggle('on')">🦶 맨발</div>
+        <div class="schip" onclick="this.classList.toggle('on')">👟 운동화</div>
+        <div class="schip" onclick="this.classList.toggle('on')">🥿 슬리퍼</div>
+      </div></div>
+      <div class="sit-grp"><div class="sit-grp-lbl">발목·아치</div><div class="chips">
+        <div class="schip" onclick="this.classList.toggle('on')">발목 왼쪽</div>
+        <div class="schip" onclick="this.classList.toggle('on')">발목 오른쪽</div>
+        <div class="schip" onclick="this.classList.toggle('on')">아치 왼쪽</div>
+        <div class="schip" onclick="this.classList.toggle('on')">아치 오른쪽</div>
+      </div></div>
+      <div class="sit-grp" style="margin-bottom:0;"><div class="sit-grp-lbl">시점</div><div class="chips">
+        <div class="schip" onclick="this.classList.toggle('on')">🌅 기상 직후</div>
+        <div class="schip" onclick="this.classList.toggle('on')">🌤 오전</div>
+        <div class="schip" onclick="this.classList.toggle('on')">☀️ 오후</div>
+        <div class="schip" onclick="this.classList.toggle('on')">🌆 저녁</div>
+        <div class="schip" onclick="this.classList.toggle('on')">🌙 밤</div>
+        <div class="schip" onclick="this.classList.toggle('on')">오래 활동 후</div>
+        <div class="schip" onclick="this.classList.toggle('on')">쉬고 나서 첫 발</div>
+      </div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">메모</div>
+    <div class="card-body"><textarea id="note-input" placeholder="예: 아침 첫 발딛기 때 특히 심함…"></textarea></div>
+  </div>
+  <button class="big-btn" onclick="saveRec()">기록 저장</button>
+  <div style="height:16px;"></div>
+</div>
+
+<!-- 히스토리 -->
+<div class="page" id="p-history">
+  <div style="padding:20px 16px 0;display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:20px;font-weight:700;">히스토리</div>
+    <div class="hview">
+      <div class="hvt on" id="hv-cal" onclick="setHV('cal')">캘린더</div>
+      <div class="hvt" id="hv-list" onclick="setHV('list')">타임라인</div>
+    </div>
+  </div>
+  <div style="padding:10px 16px 0;display:flex;gap:8px;">
+    <input id="hsearch" type="search" placeholder="검색…" oninput="renderHistory()"
+      style="flex:1;border:1.5px solid var(--border);border-radius:20px;padding:8px 14px;font-size:13px;font-family:inherit;background:var(--surf2);color:var(--ink);outline:none;">
+    <select id="hfilt" onchange="renderHistory()" style="border:1.5px solid var(--border);border-radius:20px;padding:8px 10px;font-size:12px;font-family:inherit;background:var(--surf2);color:var(--ink);outline:none;cursor:pointer;">
+      <option value="">전체</option>
+      <option value="high">통증 7↑</option>
+      <option value="low">통증 3↓</option>
+      <option value="left">왼발</option>
+      <option value="right">오른발</option>
+    </select>
+  </div>
+  <div id="hist-body"></div>
+</div>
+
+<!-- 병원 -->
+<div class="page" id="p-hosp">
+  <div style="padding:20px 16px 0;display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:20px;font-weight:700;">🏥 병원 기록</div>
+    <button style="background:var(--acc-s);color:var(--acc);border:none;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;" onclick="openHospSheet()">+ 추가</button>
+  </div>
+  <div style="padding:4px 16px 0;font-size:13px;color:var(--ink3);">진료일·소견·치료·통증 변화 추적</div>
+  <div id="hosp-compare"></div>
+  <div class="card" style="margin-bottom:0;">
+    <div id="hosp-list"><div class="empty" style="padding:24px;">📋 진료 기록이 없어요<br>+ 추가 버튼으로 시작하세요</div></div>
+  </div>
+  <div style="height:12px;"></div>
+</div>
+
+<!-- AI 분석 -->
+<div class="page" id="p-ai">
+  <div style="padding:20px 16px 4px;font-size:20px;font-weight:700;">AI 분석</div>
+  <div style="padding:0 16px 0;font-size:13px;color:var(--ink3);">족부 전문의 AI가 통증 패턴을 분석해드려요</div>
+  <div class="ai-periods">
+    <div class="aip on" id="aip-day" onclick="setAP('day')">오늘</div>
+    <div class="aip" id="aip-week" onclick="setAP('week')">주간</div>
+    <div class="aip" id="aip-month" onclick="setAP('month')">월간</div>
+    <div class="aip" id="aip-all" onclick="setAP('all')">전체</div>
+  </div>
+  <button class="big-btn" onclick="runAI()">✨ 분석 시작</button>
+  <div id="ai-area"></div>
+  <button class="outline-btn" onclick="genReport()" style="margin-top:10px;">📋 병원용 리포트 생성</button>
+  <div style="height:8px;"></div>
+</div>
+
+<!-- 탭바 -->
+<div id="tabbar">
+  <button class="tab on" id="tab-home" onclick="showPage('home')"><div class="tab-ico">🏠</div><span>홈</span></button>
+  <button class="tab" id="tab-history" onclick="showPage('history')"><div class="tab-ico">📋</div><span>기록</span></button>
+  <button class="tab-plus" onclick="showPage('log')"><div class="plus-circle">+</div></button>
+  <button class="tab" id="tab-hosp" onclick="showPage('hosp')"><div class="tab-ico">🏥</div><span>병원</span></button>
+  <button class="tab" id="tab-ai" onclick="showPage('ai')"><div class="tab-ico">🔍</div><span>AI분석</span></button>
+</div>
+
+</div><!-- app -->
+
+<!-- 기록 수정 모달 -->
+<div class="overlay" id="edit-overlay">
+  <div class="sheet">
+    <div class="sheet-title">기록 수정 <button class="sheet-close" onclick="closeEdit()">✕</button></div>
+    <div class="sheet-lbl">날짜 · 시간</div>
+    <div style="display:flex;gap:8px;"><input type="date" id="e-date" class="sheet-input" style="flex:1;"><input type="time" id="e-time" class="sheet-input" style="flex:1;"></div>
+    <div class="sheet-lbl">어느 발?</div>
+    <div style="display:flex;gap:6px;">
+      <div class="fpill" id="ef-left" onclick="setEFoot('left')">👣 왼발</div>
+      <div class="fpill" id="ef-right" onclick="setEFoot('right')">👣 오른발</div>
+      <div class="fpill" id="ef-both" onclick="setEFoot('both')">양쪽</div>
+    </div>
+    <div class="sheet-lbl">통증 강도</div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <input type="range" id="e-pain" min="1" max="10" value="5" style="flex:1;accent-color:var(--acc);" oninput="updEPain(+this.value)">
+      <div id="e-pain-badge" style="min-width:48px;height:36px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;background:var(--surf2);color:var(--ink3);">5</div>
+    </div>
+    <div class="sheet-lbl">아픈 부위</div>
+    <div id="e-zones" style="display:flex;flex-wrap:wrap;gap:5px;max-height:160px;overflow-y:auto;"></div>
+    <div class="sheet-lbl">통증 유형</div>
+    <div id="e-types" class="chips">
+      <div class="chip" data-v="욱신욱신" onclick="this.classList.toggle('on')">욱신욱신</div>
+      <div class="chip" data-v="저림" onclick="this.classList.toggle('on')">저림</div>
+      <div class="chip" data-v="뻐근함" onclick="this.classList.toggle('on')">뻐근함</div>
+      <div class="chip" data-v="아침 첫 발딛기" onclick="this.classList.toggle('on')">아침 첫 발딛기</div>
+    </div>
+    <div class="sheet-lbl">활동 상황</div>
+    <div id="e-sits" class="chips">
+      <div class="schip" data-v="🚶 걸을 때" onclick="this.classList.toggle('on')">🚶 걸을 때</div>
+      <div class="schip" data-v="🪑 앉아있을 때" onclick="this.classList.toggle('on')">🪑 앉아있을 때</div>
+      <div class="schip" data-v="🧍 서있을 때" onclick="this.classList.toggle('on')">🧍 서있을 때</div>
+      <div class="schip" data-v="🏃 뛸 때" onclick="this.classList.toggle('on')">🏃 뛸 때</div>
+      <div class="schip" data-v="🧘 누워있을 때" onclick="this.classList.toggle('on')">🧘 누워있을 때</div>
+      <div class="schip" data-v="🏋️ 운동할 때" onclick="this.classList.toggle('on')">🏋️ 운동할 때</div>
+      <div class="schip" data-v="🦶 맨발" onclick="this.classList.toggle('on')">🦶 맨발</div>
+      <div class="schip" data-v="👟 운동화" onclick="this.classList.toggle('on')">👟 운동화</div>
+      <div class="schip" data-v="🥿 슬리퍼" onclick="this.classList.toggle('on')">🥿 슬리퍼</div>
+    </div>
+    <div class="sheet-lbl">메모</div>
+    <textarea id="e-note" placeholder="메모"></textarea>
+    <div class="sheet-btns">
+      <button class="btn-del" id="e-del-btn" onclick="confirmDelRec()">삭제</button>
+      <button class="btn-save" onclick="saveEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 병원 모달 -->
+<div class="overlay" id="hosp-overlay">
+  <div class="sheet">
+    <div class="sheet-title" id="hosp-sheet-title">진료 추가 <button class="sheet-close" onclick="closeHospSheet()">✕</button></div>
+    <div class="sheet-lbl">진료일</div>
+    <input type="date" id="h-date" class="sheet-input">
+    <div class="sheet-lbl">진료과</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;" id="h-dept-chips">
+      <div class="schip" data-v="정형외과" onclick="setHDept(this)">정형외과</div>
+      <div class="schip" data-v="족부클리닉" onclick="setHDept(this)">족부클리닉</div>
+      <div class="schip" data-v="재활의학과" onclick="setHDept(this)">재활의학과</div>
+      <div class="schip" data-v="한의원" onclick="setHDept(this)">한의원</div>
+      <div class="schip" data-v="통증의학과" onclick="setHDept(this)">통증의학과</div>
+      <div class="schip" data-v="기타" onclick="setHDept(this)">기타</div>
+    </div>
+    <div class="sheet-lbl">병원명 (선택)</div>
+    <input type="text" id="h-hospital" class="sheet-input" placeholder="예: ○○정형외과">
+    <div class="sheet-lbl">진단 / 소견</div>
+    <input type="text" id="h-diag" class="sheet-input" placeholder="예: 족저근막염, 경과 관찰">
+    <div class="sheet-lbl">치료 내용</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;" id="h-treat-chips">
+      <div class="schip" data-v="약물치료" onclick="this.classList.toggle('on')">💊 약물치료</div>
+      <div class="schip" data-v="물리치료" onclick="this.classList.toggle('on')">🔧 물리치료</div>
+      <div class="schip" data-v="체외충격파" onclick="this.classList.toggle('on')">⚡ 체외충격파</div>
+      <div class="schip" data-v="주사치료" onclick="this.classList.toggle('on')">💉 주사치료</div>
+      <div class="schip" data-v="깔창처방" onclick="this.classList.toggle('on')">🦺 깔창처방</div>
+      <div class="schip" data-v="테이핑" onclick="this.classList.toggle('on')">🩹 테이핑</div>
+      <div class="schip" data-v="수술" onclick="this.classList.toggle('on')">🏥 수술</div>
+      <div class="schip" data-v="경과관찰" onclick="this.classList.toggle('on')">👁️ 경과관찰</div>
+    </div>
+    <div class="sheet-lbl">진료 당일 통증 강도</div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <input type="range" id="h-pain" min="1" max="10" value="5" style="flex:1;accent-color:var(--acc);" oninput="updHPain(+this.value)">
+      <div id="h-pain-badge" style="min-width:48px;height:36px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;background:var(--surf2);color:var(--ink3);">5</div>
+    </div>
+    <div class="sheet-lbl">다음 예약일 (선택)</div>
+    <input type="date" id="h-next" class="sheet-input">
+    <div class="sheet-lbl">메모</div>
+    <textarea id="h-note" placeholder="예: 깔창 착용 후 호전, 2주 뒤 재방문…"></textarea>
+    <div class="sheet-btns">
+      <button class="btn-del" id="h-del-btn" style="display:none;" onclick="confirmDelHosp()">삭제</button>
+      <button class="btn-save-only" onclick="saveHosp()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 데이터 ──
+const ZL={toe1:'엄지',toe2:'검지',toe3:'중지',toe4:'약지',toe5:'소지',gap1:'사이1-2',gap2:'사이2-3',gap3:'사이3-4',gap4:'사이4-5',ball:'발볼',arch:'아치',heel:'발뒤꿈치',top:'발등','ankle-front':'발목앞','ankle-back':'발목뒤','ankle-inner':'발목안쪽','ankle-outer':'발목바깥쪽'};
+const SVGM={toe1:'fz-toe1',toe2:'fz-toe2',toe3:'fz-toe3',toe4:'fz-toe4',toe5:'fz-toe5',gap1:'fz-gap1',gap2:'fz-gap2',gap3:'fz-gap3',gap4:'fz-gap4',ball:'fz-ball',arch:'fz-arch',heel:'fz-heel','ankle-front':'fz-af','ankle-inner':'fz-ai','ankle-outer':'fz-ao'};
+const PC=[null,['#16A34A','#f0fdf4'],['#16A34A','#f0fdf4'],['#D97706','#fffbeb'],['#D97706','#fffbeb'],['#EA580C','#fff7ed'],['#EA580C','#fff7ed'],['#DC2626','#fef2f2'],['#DC2626','#fef2f2'],['#991B1B','#450a0a'],['#991B1B','#450a0a']];
+const DAYS=['일','월','화','수','목','금','토'];
+const HC=['#bbf7d0','#fef08a','#fed7aa','#fca5a5','#f87171'];
+const ALL_ZONES=['toe1','toe2','toe3','toe4','toe5','gap1','gap2','gap3','gap4','ball','arch','heel','top','ankle-front','ankle-back','ankle-inner','ankle-outer'];
+
+let recs=[],hosps=[];
+let selFoot='left',selZ=new Set();
+let hv='cal',calY=new Date().getFullYear(),calM=new Date().getMonth(),calSel=null,openDays=new Set();
+let editId=null,eFoot='left',eDelConf=false;
+let hospEditId=null,hDept='',hDelConf=false;
+let aiPeriod='day',aiResult='';
+
+// ── Supabase 설정 ──
+const SUPA_URL='https://wblndotsbuejihjembjz.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndibG5kb3RzYnVlamloamVtYmp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MTczODksImV4cCI6MjEwNTQ5MzM4OX0.BvPUSn3afCpe5LkhIcygwENtf6pNZPGfvRDLR2Q1eBQ';
+
+async function sbGet(table, order='id'){
+  const res=await fetch(`${SUPA_URL}/rest/v1/${table}?order=${order}.desc&limit=500`,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+  return res.ok?await res.json():[];
+}
+async function sbUpsert(table, data){
+  await fetch(`${SUPA_URL}/rest/v1/${table}`,{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify(data)});
+}
+async function sbDelete(table, id){
+  await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+}
+
+// ── 초기화 ──
+(async()=>{
+  recs=JSON.parse(localStorage.getItem('fp3')||'[]');
+  hosps=JSON.parse(localStorage.getItem('fp3h')||'[]');
+  try{
+    const [cr,ch]=await Promise.all([sbGet('records'),sbGet('hosps','date')]);
+    if(cr.length){
+      recs=cr.map(r=>({...r,zones:r.zones||[],zoneLabels:r.zone_labels||[],types:r.types||[],situations:r.situations||[]}));
+      localStorage.removeItem('fp3');
+    } else if(recs.length){
+      for(const r of recs)await sbUpsert('records',toRow(r)).catch(()=>{});
+    }
+    if(ch.length){hosps=ch;localStorage.removeItem('fp3h');}
+    else if(hosps.length){for(const h of hosps)await sbUpsert('hosps',h).catch(()=>{});}
+    document.getElementById('sync-st').textContent='☁️ Supabase';
+  }catch(e){document.getElementById('sync-st').textContent='💾 로컬';console.error(e);}
+  tick();setInterval(tick,1000);
+  renderHome();
+})();
+
+function toRow(r){
+  return {id:r.id,ts:r.ts,foot:r.foot,zones:r.zones,zone_labels:r.zoneLabels,pain:r.pain,types:r.types,situations:r.situations,note:r.note};
+}
+
+function p2(n){return String(n).padStart(2,'0');}
+function fgc(p){return PC[p]?PC[p][0]:'#a09b96';}
+function bgc(p){return PC[p]?PC[p][1]:'#f0ede6';}
+function flabel(f){return{left:'왼발',right:'오른발',both:'양쪽'}[f]||f;}
+function fmtT(ts){return new Date(ts).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});}
+function fmtD(ts){
+  const d=new Date(ts),n=new Date(),y=new Date(n);y.setDate(n.getDate()-1);
+  if(d.toDateString()===n.toDateString())return'오늘';
+  if(d.toDateString()===y.toDateString())return'어제';
+  return d.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+}
+function pct(ts){const d=new Date(ts);return((d.getHours()*60+d.getMinutes())/(24*60)*100).toFixed(2);}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+
+function tick(){
+  const n=new Date(),h=n.getHours();
+  document.getElementById('greet').textContent=h<6?'새벽이에요 🌛':h<12?'좋은 아침 ☀️':h<18?'안녕하세요 👋':h<22?'좋은 저녁 🌆':'밤이에요 🌙';
+  document.getElementById('hdate').textContent=`${n.getFullYear()}년 ${n.getMonth()+1}월 ${n.getDate()}일 (${DAYS[n.getDay()]})`;
+  document.getElementById('htime').textContent=`${p2(h)}:${p2(n.getMinutes())}:${p2(n.getSeconds())}`;
+}
+
+// ── 탭 네비 ──
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
+  document.getElementById('p-'+name).classList.add('show');
+  ['home','history','hosp','ai'].forEach(x=>{
+    const t=document.getElementById('tab-'+x);
+    if(t)t.classList.toggle('on',x===name);
+  });
+  if(name==='log'){
+    const n=new Date();
+    const d=document.getElementById('rd'),t=document.getElementById('rt');
+    d.value=n.toISOString().slice(0,10);
+    t.value=p2(n.getHours())+':'+p2(n.getMinutes());
+  }
+  if(name==='history')renderHistory();
+  if(name==='hosp')renderHosp();
+  if(name==='home')renderHome();
+  if(name==='ai'&&aiResult)document.getElementById('ai-area').innerHTML=`<div class="ai-result">${aiResult}</div>`;
+  window.scrollTo(0,0);
+}
+
+// ── 기록 폼 ──
+function setFoot(f){selFoot=f;['left','right','both'].forEach(x=>document.getElementById('fp-'+x).classList.toggle('on',x===f));}
+function tzClick(id){
+  if(selZ.has(id))selZ.delete(id);else selZ.add(id);
+  const on=selZ.has(id);
+  const sv=SVGM[id];if(sv)document.getElementById(sv)?.setAttribute('data-on',on?'1':'0');
+  document.getElementById('zc-'+id)?.classList.toggle('on',on);
+}
+function onPainSlide(v){
+  const b=document.getElementById('pain-badge');
+  b.textContent=v;b.style.background=bgc(v);b.style.color=fgc(v);
+}
+
+async function saveRec(){
+  if(!selZ.size){toast('아픈 부위를 선택해주세요');return;}
+  const pain=+document.getElementById('pain-slider').value;
+  const types=[...document.querySelectorAll('#p-log .chip.on')].map(c=>c.textContent);
+  const sits=[...document.querySelectorAll('#p-log .schip.on')].map(c=>c.textContent);
+  const note=document.getElementById('note-input').value.trim();
+  const dv=document.getElementById('rd').value,tv=document.getElementById('rt').value;
+  const ts=dv&&tv?new Date(dv+'T'+tv).toISOString():new Date().toISOString();
+  const rec={id:Date.now(),ts,foot:selFoot,zones:[...selZ],zoneLabels:[...selZ].map(z=>ZL[z]||z),pain,types,situations:sits,note};
+  recs.unshift(rec);
+  try{await sbUpsert('records',toRow(rec));}catch(e){localStorage.setItem('fp3',JSON.stringify(recs));}
+  // reset
+  selZ.clear();
+  document.querySelectorAll('.fz').forEach(e=>e.setAttribute('data-on','0'));
+  document.querySelectorAll('#p-log .zc').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('#p-log .chip,#p-log .schip').forEach(e=>e.classList.remove('on'));
+  document.getElementById('note-input').value='';
+  document.getElementById('pain-slider').value=5;
+  const b=document.getElementById('pain-badge');b.textContent='–';b.style.background='';b.style.color='';
+  selFoot='left';setFoot('left');
+  toast('✓ 저장됐어요!');showPage('home');
+}
+
+function quickCopy(){
+  if(!recs.length)return;
+  const r={...recs[0],id:Date.now(),ts:new Date().toISOString()};
+  recs.unshift(r);
+  sbUpsert('records',toRow(r)).catch(()=>{localStorage.setItem('fp3',JSON.stringify(recs));});
+  toast('✓ 마지막 기록과 동일하게 저장됐어요!');renderHome();
+}
+
+// ── 홈 ──
+function renderHome(){
+  const tod=new Date().toDateString();
+  const tr=recs.filter(r=>new Date(r.ts).toDateString()===tod);
+  const tc=document.getElementById('today-content');
+  if(tr.length){
+    const avg=(tr.reduce((s,r)=>s+r.pain,0)/tr.length).toFixed(1);
+    const mx=Math.max(...tr.map(r=>r.pain));
+    tc.innerHTML=`<div class="today-stats"><div class="today-stat"><div class="n">${tr.length}</div><div class="l">기록</div></div><div class="today-stat"><div class="n" style="color:rgba(255,255,255,.85)">${avg}</div><div class="l">평균</div></div><div class="today-stat"><div class="n" style="color:rgba(255,255,255,.85)">${mx}</div><div class="l">최고</div></div></div>`;
+  }else{
+    tc.innerHTML='<div style="font-size:14px;opacity:.8;">오늘 기록이 없어요. + 버튼으로 기록해보세요</div>';
+  }
+  if(recs.length)tc.innerHTML+=`<button class="copy-btn" onclick="quickCopy()">어제랑 똑같이 아파요 →</button>`;
+  // 주간 스트립
+  const ws=document.getElementById('week-strip');ws.innerHTML='';
+  const now=new Date();
+  for(let i=0;i<7;i++){
+    const d=new Date(now);d.setDate(now.getDate()-now.getDay()+i);
+    const dr=recs.filter(r=>new Date(r.ts).toDateString()===d.toDateString());
+    const isTod=d.toDateString()===tod;
+    const avg=dr.length?dr.reduce((s,r)=>s+r.pain,0)/dr.length:0;
+    let sty='';
+    if(dr.length){const hi=Math.min(5,Math.ceil(avg/2));sty=`background:${HC[hi-1]};color:#1c1917;`;}
+    const div=document.createElement('div');div.className='week-day';
+    div.innerHTML=`<div class="week-day-name">${DAYS[i]}</div><div class="week-dot${isTod?' today':''}" style="${sty}" onclick="showPage('history')">${d.getDate()}</div>`;
+    ws.appendChild(div);
+  }
+  // 최근 기록
+  const rl=document.getElementById('home-recs');
+  if(!recs.length){rl.innerHTML='<div class="empty">아직 기록이 없어요</div>';return;}
+  rl.innerHTML=recs.slice(0,5).map(r=>`
+    <div class="rec-card" onclick="openEdit(${r.id})">
+      <div class="rec-time">${fmtT(r.ts)}<br><span style="font-size:10px;">${fmtD(r.ts)}</span></div>
+      <div class="rec-body">
+        <div class="rec-zones">${r.zoneLabels.slice(0,3).join(' · ')}${r.zoneLabels.length>3?` +${r.zoneLabels.length-3}`:''}</div>
+        <div class="rec-tags">${r.types.slice(0,2).map(t=>`<span class="tag">${t}</span>`).join('')}${(r.situations||[]).slice(0,1).map(s=>`<span class="tag">${s}</span>`).join('')}</div>
+      </div>
+      <div class="pain-dot" style="background:${bgc(r.pain)};color:${fgc(r.pain)};">${r.pain}</div>
+    </div>`).join('');
+}
+
+// ── 히스토리 ──
+function setHV(v){hv=v;['cal','list'].forEach(x=>document.getElementById('hv-'+x).classList.toggle('on',x===v));renderHistory();}
+function filteredRecs(){
+  const q=(document.getElementById('hsearch')?.value||'').toLowerCase();
+  const f=document.getElementById('hfilt')?.value||'';
+  return recs.filter(r=>{
+    if(q&&!r.zoneLabels.join(' ').toLowerCase().includes(q)&&!(r.note||'').toLowerCase().includes(q))return false;
+    if(f==='high'&&r.pain<7)return false;
+    if(f==='low'&&r.pain>3)return false;
+    if(f==='left'&&r.foot!=='left')return false;
+    if(f==='right'&&r.foot!=='right')return false;
+    return true;
+  });
+}
+function renderHistory(){
+  const el=document.getElementById('hist-body');
+  const fr=filteredRecs();
+  if(!fr.length){el.innerHTML=`<div class="empty">${recs.length?'검색 결과가 없어요':'기록이 없어요'}</div>`;return;}
+  hv==='cal'?renderCal(el,fr):renderTL(el,fr);
+}
+function renderCal(el,fr){
+  const first=new Date(calY,calM,1).getDay(),days=new Date(calY,calM+1,0).getDate(),today=new Date();
+  const dm={};fr.forEach(r=>{const d=new Date(r.ts);if(d.getFullYear()===calY&&d.getMonth()===calM){const k=d.getDate();if(!dm[k])dm[k]=[];dm[k].push(r);}});
+  let cells='';
+  for(let i=0;i<first;i++)cells+='<div></div>';
+  for(let d=1;d<=days;d++){
+    const dr=dm[d]||[],isTod=today.getFullYear()===calY&&today.getMonth()===calM&&today.getDate()===d,isSel=calSel===d;
+    let bg='';if(dr.length){const avg=dr.reduce((s,r)=>s+r.pain,0)/dr.length;const hi=Math.min(5,Math.ceil(avg/2));bg=`background:${HC[hi-1]};color:#1c1917;`;}
+    cells+=`<div class="cal-c${dr.length?' has':''}${isTod?' today':''}${isSel?' sel':''}" style="${bg}" onclick="calClick(${d})">${d}</div>`;
+  }
+  const selRecs=calSel?(dm[calSel]||[]).filter(r=>fr.includes(r)):[];
+  el.innerHTML=`<div class="cal-wrap">
+    <div class="cal-nav"><button onclick="calNav(-1)">‹</button><div style="font-size:15px;font-weight:600;">${calY}년 ${calM+1}월</div><button onclick="calNav(1)">›</button></div>
+    <div class="cal-grid">${DAYS.map(d=>`<div class="cal-dn">${d}</div>`).join('')}${cells}</div>
+    <div class="cal-legend">
+      <div class="cal-li"><div class="cal-ld" style="background:#bbf7d0;"></div>낮음</div>
+      <div class="cal-li"><div class="cal-ld" style="background:#fef08a;"></div>보통</div>
+      <div class="cal-li"><div class="cal-ld" style="background:#fca5a5;"></div>높음</div>
+      <div class="cal-li"><div class="cal-ld" style="background:#f87171;"></div>극심</div>
+    </div></div>
+  ${calSel&&selRecs.length?`<div style="padding:14px 16px 6px;font-size:13px;font-weight:600;">${calM+1}월 ${calSel}일 · ${selRecs.length}건</div>${selRecs.map(r=>teHTML(r)).join('')}`:''}`;
+}
+function calNav(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}calSel=null;renderHistory();}
+function calClick(d){calSel=calSel===d?null:d;renderHistory();}
+function renderTL(el,fr){
+  const g={};fr.forEach(r=>{const k=new Date(r.ts).toDateString();if(!g[k])g[k]=[];g[k].push(r);});
+  el.innerHTML=Object.entries(g).sort((a,b)=>new Date(b[0])-new Date(a[0])).map(([key,rs])=>{
+    const srs=[...rs].sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+    const avg=(rs.reduce((s,r)=>s+r.pain,0)/rs.length).toFixed(1),mx=Math.max(...rs.map(r=>r.pain));
+    const segs=srs.map((r,i)=>{const l=pct(r.ts),rp=i<srs.length-1?pct(srs[i+1].ts):l,w=(rp-l).toFixed(2);return+w<=0?'':`<div class="tl-seg" style="left:${l}%;width:${w}%;background:${fgc(r.pain)};"></div>`;}).join('');
+    const dots=srs.map(r=>`<div class="tl-dot" style="left:${pct(r.ts)}%;background:${fgc(r.pain)};"></div>`).join('');
+    const isOpen=openDays.has(key);
+    return`<div class="tl-day"><div class="tl-dlbl">${fmtD(rs[0].ts)}</div><div class="tl-card">
+      <div class="tl-bar-area">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span style="font-size:13px;font-weight:600;">${fmtD(rs[0].ts)}</span><span style="font-size:11px;color:var(--ink3);">${rs.length}건 · 최고 ${mx} · 평균 ${avg}</span></div>
+        <div class="tl-track">${segs}${dots}</div>
+        <div class="tl-ax"><span>0시</span><span>6시</span><span>12시</span><span>18시</span><span>24시</span></div>
+      </div>
+      <div class="tl-toggle" onclick="togDay('${key}')">${isOpen?'▲ 접기':'▼ 기록 보기 ('+rs.length+'건)'}</div>
+      <div class="tl-entries ${isOpen?'open':''}">${srs.map(r=>teHTML(r)).join('')}</div>
+    </div></div>`;
+  }).join('');
+}
+function togDay(k){if(openDays.has(k))openDays.delete(k);else openDays.add(k);renderHistory();}
+function teHTML(r){
+  return`<div class="te">
+    <div class="te-l"><div class="te-time">${fmtT(r.ts)}</div><div class="te-pbadge" style="background:${bgc(r.pain)};color:${fgc(r.pain)};">통증 ${r.pain}</div></div>
+    <div class="te-b"><span class="te-foot">${flabel(r.foot)}</span><div class="te-zones">📍 ${r.zoneLabels.join(' · ')}</div>
+      ${r.types?.length?`<div class="te-tags">${r.types.map(t=>`<span class="te-tag">${t}</span>`).join('')}</div>`:''}
+      ${(r.situations||[]).length?`<div class="te-tags" style="margin-top:3px;">${r.situations.map(s=>`<span class="te-tag" style="background:var(--acc-s);color:var(--acc);">${s}</span>`).join('')}</div>`:''}
+      ${r.note?`<div class="te-note">"${r.note}"</div>`:''}
+    </div>
+    <button class="te-edit" onclick="openEdit(${r.id})">✏️</button>
+  </div>`;
+}
+
+// ── 수정 모달 ──
+function openEdit(id){
+  const r=recs.find(r=>r.id===id);if(!r)return;
+  editId=id;eDelConf=false;
+  const d=new Date(r.ts);
+  document.getElementById('e-date').value=d.toISOString().slice(0,10);
+  document.getElementById('e-time').value=p2(d.getHours())+':'+p2(d.getMinutes());
+  document.getElementById('e-pain').value=r.pain;updEPain(r.pain);
+  document.getElementById('e-note').value=r.note||'';
+  eFoot=r.foot||'left';setEFoot(eFoot);
+  // zones
+  const zEl=document.getElementById('e-zones');
+  zEl.innerHTML=ALL_ZONES.map(z=>`<div class="zc${(r.zones||[]).includes(z)?' on':''}" data-z="${z}" onclick="this.classList.toggle('on')"><div class="zdot"></div>${ZL[z]||z}</div>`).join('');
+  document.querySelectorAll('#e-types .chip').forEach(c=>c.classList.toggle('on',(r.types||[]).includes(c.dataset.v)));
+  document.querySelectorAll('#e-sits .schip').forEach(c=>c.classList.toggle('on',(r.situations||[]).includes(c.dataset.v)));
+  const db=document.getElementById('e-del-btn');db.textContent='삭제';db.style.background='var(--red-s)';db.style.color='var(--red)';
+  document.getElementById('edit-overlay').classList.add('show');
+}
+function closeEdit(){document.getElementById('edit-overlay').classList.remove('show');editId=null;eDelConf=false;}
+function setEFoot(f){eFoot=f;['left','right','both'].forEach(x=>document.getElementById('ef-'+x).classList.toggle('on',x===f));}
+function updEPain(v){const b=document.getElementById('e-pain-badge');b.textContent=v;b.style.background=bgc(v);b.style.color=fgc(v);}
+async function saveEdit(){
+  if(!editId)return;
+  const dv=document.getElementById('e-date').value,tv=document.getElementById('e-time').value;
+  const ts=dv&&tv?new Date(dv+'T'+tv).toISOString():null;
+  const pain=+document.getElementById('e-pain').value;
+  const note=document.getElementById('e-note').value.trim();
+  const zones=[...document.querySelectorAll('#e-zones .zc.on')].map(c=>c.dataset.z);
+  const zoneLabels=zones.length?zones.map(z=>ZL[z]||z):(recs.find(r=>r.id===editId)?.zoneLabels||[]);
+  const types=[...document.querySelectorAll('#e-types .chip.on')].map(c=>c.dataset.v);
+  const situations=[...document.querySelectorAll('#e-sits .schip.on')].map(c=>c.dataset.v);
+  recs=recs.map(r=>{if(r.id!==editId)return r;const u={...r,foot:eFoot,pain,note,zones:zones.length?zones:r.zones,zoneLabels,types,situations};if(ts)u.ts=ts;return u;});
+  try{await sbUpsert('records',toRow(recs.find(r=>r.id===editId)));}catch(e){localStorage.setItem('fp3',JSON.stringify(recs));}
+  closeEdit();renderHome();if(document.getElementById('p-history').classList.contains('show'))renderHistory();
+  toast('✓ 수정됐어요!');
+}
+async function delRec(id){
+  recs=recs.filter(r=>r.id!==id);
+  try{await sbDelete('records',id);}catch(e){localStorage.setItem('fp3',JSON.stringify(recs));}
+  renderHome();if(document.getElementById('p-history').classList.contains('show'))renderHistory();
+}
+function confirmDelRec(){
+  if(!eDelConf){
+    eDelConf=true;
+    const b=document.getElementById('e-del-btn');b.textContent='정말 삭제?';b.style.background='var(--red)';b.style.color='#fff';
+    setTimeout(()=>{eDelConf=false;const b=document.getElementById('e-del-btn');if(b){b.textContent='삭제';b.style.background='var(--red-s)';b.style.color='var(--red)';}},3000);
+    return;
+  }
+  const id=editId;closeEdit();delRec(id);toast('삭제됐어요');
+}
+document.getElementById('edit-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeEdit();});
+
+// ── 병원 ──
+function renderHosp(){
+  renderHospCompare();
+  const el=document.getElementById('hosp-list');
+  if(!hosps.length){el.innerHTML='<div class="empty" style="padding:24px;">📋 진료 기록이 없어요<br>+ 추가 버튼으로 시작하세요</div>';return;}
+  const sorted=[...hosps].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  el.innerHTML=sorted.map(h=>{
+    const today=new Date();today.setHours(0,0,0,0);
+    const nextD=h.next?new Date(h.next+'T00:00'):null;
+    const isUpcoming=nextD&&nextD>=today;
+    return`<div class="hosp-item" onclick="openHospSheet(${h.id})">
+      <div>
+        <div class="hosp-dlbl">${new Date(h.date+'T00:00').toLocaleDateString('ko-KR',{month:'short',day:'numeric'})}</div>
+        <div class="hosp-pdot" style="background:${bgc(h.pain)};color:${fgc(h.pain)};margin-top:6px;">${h.pain}</div>
+      </div>
+      <div class="hosp-body">
+        ${h.dept?`<div class="hosp-dept">${h.dept}${h.hospital?' · '+h.hospital:''}</div>`:''}
+        ${h.diag?`<div class="hosp-diag">${h.diag}</div>`:''}
+        ${h.treats?.length?`<div class="hosp-treats">${h.treats.map(t=>`<span class="hosp-treat">${t}</span>`).join('')}</div>`:''}
+        ${h.note?`<div class="hosp-note">"${h.note}"</div>`:''}
+        ${isUpcoming?`<div class="hosp-next">📅 다음 예약 ${new Date(h.next+'T00:00').toLocaleDateString('ko-KR',{month:'short',day:'numeric'})}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderHospCompare(){
+  const el=document.getElementById('hosp-compare');if(!el)return;
+  if(hosps.length<2){el.innerHTML='';return;}
+  const sorted=[...hosps].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const first=sorted[0],last=sorted[sorted.length-1];
+  const diff=last.pain-first.pain;
+  const dc=diff<0?'#16A34A':diff>0?'#DC2626':'#a09b96';
+  const dt=diff<0?`↓ ${Math.abs(diff)} 감소`:diff>0?`↑ ${diff} 증가`:'변화 없음';
+  el.innerHTML=`<div style="margin:12px 16px 0;background:var(--surf);border-radius:var(--r);border:1px solid var(--border);padding:14px;">
+    <div style="font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;">📈 진료 통증 변화</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="text-align:center;flex:1;"><div style="font-size:10px;color:var(--ink3);margin-bottom:4px;">첫 진료</div><div style="font-size:24px;font-weight:700;color:${fgc(first.pain)};">${first.pain}</div><div style="font-size:10px;color:var(--ink3);margin-top:2px;">${new Date(first.date+'T00:00').toLocaleDateString('ko-KR',{month:'short',day:'numeric'})}</div></div>
+      <div style="font-size:20px;color:var(--ink3);">→</div>
+      <div style="text-align:center;flex:1;"><div style="font-size:10px;color:var(--ink3);margin-bottom:4px;">최근 진료</div><div style="font-size:24px;font-weight:700;color:${fgc(last.pain)};">${last.pain}</div><div style="font-size:10px;color:var(--ink3);margin-top:2px;">${new Date(last.date+'T00:00').toLocaleDateString('ko-KR',{month:'short',day:'numeric'})}</div></div>
+      <div style="text-align:center;flex:1;background:var(--surf2);border-radius:10px;padding:10px 6px;"><div style="font-size:10px;color:var(--ink3);margin-bottom:4px;">변화</div><div style="font-size:18px;font-weight:700;color:${dc};">${dt}</div><div style="font-size:10px;color:var(--ink3);margin-top:2px;">${hosps.length}회 진료</div></div>
+    </div>
+  </div>`;
+}
+function setHDept(el){document.querySelectorAll('#h-dept-chips .schip').forEach(c=>c.classList.remove('on'));el.classList.add('on');hDept=el.dataset.v;}
+function updHPain(v){const b=document.getElementById('h-pain-badge');b.textContent=v;b.style.background=bgc(v);b.style.color=fgc(v);}
+function openHospSheet(id){
+  hospEditId=id||null;hDelConf=false;hDept='';
+  document.getElementById('hosp-sheet-title').innerHTML=(id?'진료 수정':'진료 추가')+' <button class="sheet-close" onclick="closeHospSheet()">✕</button>';
+  document.getElementById('h-date').value='';
+  document.getElementById('h-hospital').value='';
+  document.getElementById('h-diag').value='';
+  document.getElementById('h-note').value='';
+  document.getElementById('h-next').value='';
+  document.getElementById('h-pain').value=5;updHPain(5);
+  document.querySelectorAll('#h-dept-chips .schip').forEach(c=>c.classList.remove('on'));
+  document.querySelectorAll('#h-treat-chips .schip').forEach(c=>c.classList.remove('on'));
+  const db=document.getElementById('h-del-btn');db.style.display=id?'block':'none';db.textContent='삭제';db.style.background='var(--red-s)';db.style.color='var(--red)';
+  if(id){
+    const h=hosps.find(h=>h.id===id);
+    if(h){
+      document.getElementById('h-date').value=h.date;
+      document.getElementById('h-hospital').value=h.hospital||'';
+      document.getElementById('h-diag').value=h.diag||'';
+      document.getElementById('h-note').value=h.note||'';
+      document.getElementById('h-next').value=h.next||'';
+      document.getElementById('h-pain').value=h.pain||5;updHPain(h.pain||5);
+      if(h.dept){hDept=h.dept;document.querySelectorAll('#h-dept-chips .schip').forEach(c=>{if(c.dataset.v===h.dept)c.classList.add('on');});}
+      if(h.treats)document.querySelectorAll('#h-treat-chips .schip').forEach(c=>{if(h.treats.includes(c.dataset.v))c.classList.add('on');});
+    }
+  }
+  document.getElementById('hosp-overlay').classList.add('show');
+}
+function closeHospSheet(){document.getElementById('hosp-overlay').classList.remove('show');hospEditId=null;hDelConf=false;}
+async function saveHosp(){
+  const date=document.getElementById('h-date').value;
+  if(!date){toast('진료일을 입력해주세요');return;}
+  const h={id:hospEditId||Date.now(),date,dept:hDept,hospital:document.getElementById('h-hospital').value.trim(),diag:document.getElementById('h-diag').value.trim(),treats:[...document.querySelectorAll('#h-treat-chips .schip.on')].map(c=>c.dataset.v),pain:+document.getElementById('h-pain').value,next:document.getElementById('h-next').value,note:document.getElementById('h-note').value.trim()};
+  if(hospEditId)hosps=hosps.map(x=>x.id===hospEditId?h:x);
+  else hosps.unshift(h);
+  try{await sbUpsert('hosps',h);}catch(e){localStorage.setItem('fp3h',JSON.stringify(hosps));}
+  closeHospSheet();renderHosp();toast(hospEditId?'✓ 수정됐어요!':'✓ 진료 기록 추가됐어요!');
+}
+function confirmDelHosp(){
+  if(!hDelConf){
+    hDelConf=true;
+    const b=document.getElementById('h-del-btn');b.textContent='정말 삭제?';b.style.background='var(--red)';b.style.color='#fff';
+    setTimeout(()=>{hDelConf=false;const b=document.getElementById('h-del-btn');if(b){b.textContent='삭제';b.style.background='var(--red-s)';b.style.color='var(--red)';}},3000);
+    return;
+  }
+  const id=hospEditId;closeHospSheet();
+  hosps=hosps.filter(h=>h.id!==id);
+  sbDelete('hosps',id).catch(()=>{});
+  renderHosp();toast('삭제됐어요');
+}
+document.getElementById('hosp-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeHospSheet();});
+
+// ── AI 분석 ──
+function setAP(p){aiPeriod=p;['day','week','month','all'].forEach(x=>document.getElementById('aip-'+x).classList.toggle('on',x===p));}
+async function runAI(){
+  const area=document.getElementById('ai-area');
+  area.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:20px 16px;color:var(--ink3);font-size:14px;"><div class="spin"></div>분석 중...</div>';
+  const now=new Date();let fr=recs,lbl='전체';
+  if(aiPeriod==='day'){fr=recs.filter(r=>new Date(r.ts).toDateString()===now.toDateString());lbl='오늘';}
+  else if(aiPeriod==='week'){const w=new Date(now);w.setDate(now.getDate()-6);w.setHours(0,0,0,0);fr=recs.filter(r=>new Date(r.ts)>=w);lbl='최근 7일';}
+  else if(aiPeriod==='month'){const m=new Date(now.getFullYear(),now.getMonth(),1);fr=recs.filter(r=>new Date(r.ts)>=m);lbl='이번 달';}
+  if(!fr.length){area.innerHTML='<div class="ai-result">해당 기간에 기록이 없어요.</div>';return;}
+  const recSummary=fr.map(r=>`[${new Date(r.ts).toLocaleDateString('ko-KR')} ${fmtT(r.ts)}] ${flabel(r.foot)} / 부위:${r.zoneLabels.join(',')} / 통증:${r.pain}/10 / 유형:${r.types?.join(',')||'없음'} / 상황:${(r.situations||[]).join(',')||'없음'} / 메모:${r.note||'없음'}`).join('\n');
+  const hospSummary=hosps.length?`\n\n[병원 진료 기록 - ${hosps.length}회]\n`+[...hosps].sort((a,b)=>new Date(a.date)-new Date(b.date)).map(h=>`- ${h.date} ${h.dept||''} | 진단:${h.diag||'없음'} | 치료:${(h.treats||[]).join(',')||'없음'} | 통증:${h.pain}/10 | 메모:${h.note||'없음'}`).join('\n'):'';
+  const sys=`당신은 20년 경력 족부 전문의(Podiatrist)입니다. 발·발목 해부학, 생체역학, 족부 질환 전문가입니다. 족저근막염·아킬레스건염·무지외반증·지간신경종·피로골절 등을 포함한 다양한 족부 질환을 진단하고 치료해왔습니다. 데이터 기반으로 의심 질환을 구체적으로 추론하고, 즉시 시도할 수 있는 자가 관리법을 제시하세요. 진찰 없이 최종 진단은 불가함을 명시하세요.`;
+  const usr=`환자 발 통증 기록 (기간: ${lbl})\n\n${recSummary}${hospSummary}\n\n분석 항목:\n1. 📊 통증 패턴 요약\n2. 🦴 의심 족부 질환 (가능성 순)\n3. ⏰ 시간대·활동별 악화 요인\n4. 🔍 주목할 임상 소견\n5. 🏃 즉시 시도할 자가 관리법\n6. 🏥 병원 방문 권고 및 진료과\n7. 📈 진료 기록 있으면 치료 효과 분석`;
+  try{
+    area.innerHTML='<div class="ai-result" id="ai-stream">분석 중...</div>';
+    const aiRes=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':'','anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-opus-4-5',max_tokens:1500,system:sys,messages:[{role:'user',content:usr}]})});
+    // Netlify에서는 별도 API 키 필요 - 일단 안내 표시
+    area.innerHTML='<div class="ai-result">⚠️ AI 분석은 Netlify 배포 후 별도 설정이 필요해요.<br><br>지금은 Claude.ai 버전에서 사용해주세요!</div>';
+    return;
+  }catch(e){area.innerHTML=`<div class="ai-result">오류: ${e.message||'다시 시도해주세요.'}</div>`;}
+}
+async function genReport(){
+  if(!recs.length){toast('기록이 없어요');return;}
+  toast('리포트 생성 중...');
+  const mRecs=recs.filter(r=>new Date(r.ts)>=new Date(new Date().getFullYear(),new Date().getMonth(),1));
+  const summary=(mRecs.length?mRecs:recs.slice(0,30)).map(r=>`[${new Date(r.ts).toLocaleDateString('ko-KR')} ${fmtT(r.ts)}] ${flabel(r.foot)} / ${r.zoneLabels.join(',')} / 통증${r.pain}/10 / ${r.types?.join(',')||''} / ${r.note||''}`).join('\n');
+  const hospS=hosps.length?`\n\n진료 기록:\n`+hosps.map(h=>`${h.date} ${h.dept||''} 진단:${h.diag||''} 치료:${(h.treats||[]).join(',')}`).join('\n'):'';
+  try{
+    toast('AI 리포트는 Claude.ai 버전에서 사용해주세요!');return;
+    const res={text:''};
+    const w=window.open('','_blank');
+    if(w)w.document.write(`<html><head><meta charset="UTF-8"><title>발 통증 리포트</title><style>body{font-family:sans-serif;padding:24px;max-width:600px;line-height:1.7;}pre{white-space:pre-wrap;font-family:inherit;}</style></head><body><h2>발 통증 리포트</h2><p style="color:#888;">생성일: ${new Date().toLocaleDateString('ko-KR')}</p><hr><pre>${res.text}</pre></body></html>`);
+    else toast('팝업이 차단됐어요. 브라우저 설정에서 팝업을 허용해주세요.');
+  }catch(e){toast('오류가 발생했어요');}
+}
+
+// ── CSV ──
+function expCSV(){
+  if(!recs.length){toast('기록이 없어요');return;}
+  const h=['날짜','시간','발','부위','통증','유형','상황','메모'];
+  const rows=recs.map(r=>{const d=new Date(r.ts);return[d.toLocaleDateString('ko-KR'),fmtT(r.ts),flabel(r.foot),(r.zoneLabels||[]).join('/'),(r.pain),(r.types||[]).join('/'),(r.situations||[]).join('/'),`"${(r.note||'').replace(/"/g,'""')}"`].join(',');});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+h.join(',')+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8;'}));
+  a.download=`발통증_${new Date().toISOString().slice(0,10)}.csv`;a.click();toast('✓ 저장됨!');
+}
+</script>
+</body>
+</html>
