@@ -285,8 +285,9 @@ textarea:focus{border-color:var(--acc);}
 
 <!-- 기록 폼 -->
 <div class="page" id="p-log">
-  <div style="padding:20px 16px 0;display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-size:20px;font-weight:700;">통증 기록</div>
+  <div style="padding:16px 16px 0;display:flex;justify-content:space-between;align-items:center;">
+    <button onclick="showPage('home')" style="background:none;border:none;cursor:pointer;padding:6px 10px 6px 0;font-size:14px;color:var(--ink2);display:flex;align-items:center;gap:4px;">‹ 홈</button>
+    <div style="font-size:18px;font-weight:700;">통증 기록</div>
     <button class="big-btn" style="width:auto;margin:0;padding:8px 18px;font-size:13px;" onclick="saveRec()">저장</button>
   </div>
   <div style="padding:8px 16px 0;">
@@ -706,27 +707,88 @@ let editId=null,eFoot='left',eDelConf=false;
 let hospEditId=null,hDept='',hDelConf=false;
 let aiPeriod='day',aiResult='';
 
+// ── Supabase 설정 ──
+const SB_URL='https://wblndotsbuejihjembjz.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndibG5kb3RzYnVlamloamVtYmp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MTczODksImV4cCI6MjEwNTQ5MzM4OX0.BvPUSn3afCpe5LkhIcygwENtf6pNZPGfvRDLR2Q1eBQ';
+
+async function sbFetch(table,method='GET',body=null,query=''){
+  const res=await fetch(`${SB_URL}/rest/v1/${table}${query}`,{
+    method,headers:{
+      'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,
+      'Content-Type':'application/json','Prefer':'return=minimal'
+    },body:body?JSON.stringify(body):null
+  });
+  if(!res.ok)throw new Error(await res.text());
+  return method==='GET'?res.json():true;
+}
+
+async function sbLoad(table){return sbFetch(table,'GET',null,'?order=id.desc&limit=1000');}
+async function sbUpsert(table,row){return sbFetch(table,'POST',row,'?on_conflict=id');}
+async function sbDelete(table,id){return sbFetch(table,'DELETE',null,`?id=eq.${id}`);}
+
+function toRow(r){
+  return{
+    id:r.id,ts:r.ts,foot:r.foot||'left',
+    zones:JSON.stringify(r.zones||[]),
+    zone_labels:JSON.stringify(r.zoneLabels||[]),
+    zone_pain:JSON.stringify(r.zonePain||{}),
+    pain:r.pain||5,
+    types:JSON.stringify(r.types||[]),
+    situations:JSON.stringify(r.situations||[]),
+    note:r.note||''
+  };
+}
+function fromRow(r){
+  return{
+    id:r.id,ts:r.ts,foot:r.foot||'left',
+    zones:JSON.parse(r.zones||'[]'),
+    zoneLabels:JSON.parse(r.zone_labels||'[]'),
+    zonePain:JSON.parse(r.zone_pain||'{}'),
+    pain:r.pain||5,
+    types:JSON.parse(r.types||'[]'),
+    situations:JSON.parse(r.situations||'[]'),
+    note:r.note||''
+  };
+}
+function toHospRow(h){
+  return{
+    id:h.id,date:h.date,dept:h.dept||'',hospital:h.hospital||'',
+    diag:h.diag||'',treats:JSON.stringify(h.treats||[]),
+    pain:h.pain||0,next:h.next||'',note:h.note||''
+  };
+}
+function fromHospRow(h){
+  return{...h,treats:JSON.parse(h.treats||'[]')};
+}
+
 // ── 초기화 ──
 (async()=>{
-  // localStorage fallback
+  // localStorage 우선 로드 (빠른 초기 렌더)
   recs=JSON.parse(localStorage.getItem('fp3')||'[]');
   hosps=JSON.parse(localStorage.getItem('fp3h')||'[]');
+  renderHome();renderHosp();
+  // Supabase에서 최신 데이터 로드
   try{
-    DB=await claude.use('db');
-    if(DB){
-      const [rs,hs]=await Promise.all([
-        DB.collection('records').orderBy('id','desc').limit(500).get(),
-        DB.collection('hosps').orderBy('date','desc').limit(100).get()
-      ]);
-      const cr=rs.docs.map(d=>d.data());
-      const ch=hs.docs.map(d=>d.data());
-      if(cr.length){recs=cr;localStorage.removeItem('fp3');}
-      else if(recs.length){for(const r of recs)try{await DB.doc('records/'+r.id).set(r);}catch(e){}}
-      if(ch.length){hosps=ch;localStorage.removeItem('fp3h');}
-      else if(hosps.length){for(const h of hosps)try{await DB.doc('hosps/'+h.id).set(h);}catch(e){}}
-      document.getElementById('sync-st').textContent='☁️ 클라우드';
-    }else document.getElementById('sync-st').textContent='💾 로컬';
-  }catch(e){document.getElementById('sync-st').textContent='💾 로컬';}
+    const [rs,hs]=await Promise.all([sbLoad('records'),sbLoad('hosps')]);
+    if(rs&&rs.length){
+      recs=rs.map(fromRow);
+      localStorage.setItem('fp3',JSON.stringify(recs));
+    } else if(recs.length){
+      // localStorage 데이터를 Supabase에 업로드
+      for(const r of recs){try{await sbUpsert('records',toRow(r));}catch(e){}}
+    }
+    if(hs&&hs.length){
+      hosps=hs.map(fromHospRow);
+      localStorage.setItem('fp3h',JSON.stringify(hosps));
+    } else if(hosps.length){
+      for(const h of hosps){try{await sbUpsert('hosps',toHospRow(h));}catch(e){}}
+    }
+    document.getElementById('sync-st').textContent='☁️ 클라우드';
+    renderHome();renderHosp();
+  }catch(e){
+    console.error('Supabase 연결 실패:',e);
+    document.getElementById('sync-st').textContent='💾 로컬저장';
+  }
   tick();setInterval(tick,1000);
   renderHome();
 })();
@@ -934,13 +996,19 @@ async function saveRec(){
   const saved=[];
   for(const f of feetToSave){
     const zones=[...footData[f].zones];
-    const rec={id:Date.now()+(f==='right'?1:0),ts,foot:f,zones,zoneLabels:zones.map(z=>ZL[z]||z),pain:footData[f].pain,zonePain:{...(footData[f].zpain||{})},types,situations:sits,note};
+    // 부위별 통증 평균을 대표 통증으로
+    const zpainVals=Object.values(footData[f].zpain||{});
+    const avgPain=zpainVals.length
+      ? Math.round(zpainVals.reduce((s,v)=>s+v,0)/zpainVals.length*10)/10
+      : footData[f].pain;
+    const rec={id:Date.now()+(f==='right'?1:0),ts,foot:f,zones,zoneLabels:zones.map(z=>ZL[z]||z),pain:avgPain,zonePain:{...(footData[f].zpain||{})},types,situations:sits,note};
     saved.push(rec);
     recs.unshift(rec);
   }
   // 저장
+  localStorage.setItem('fp3',JSON.stringify(recs));
   for(const rec of saved){
-    try{await sbUpsert('records',toRow(rec));}catch(e){localStorage.setItem('fp3',JSON.stringify(recs));}
+    try{await sbUpsert('records',toRow(rec));}catch(e){console.error('저장 실패',e);}
   }
   // reset
   selZ.clear();
