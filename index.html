@@ -694,6 +694,7 @@ const HC=['#bbf7d0','#fef08a','#fed7aa','#fca5a5','#f87171'];
 const ALL_ZONES=['toe1','toe2','toe3','toe4','toe5','gap1','gap2','gap3','gap4','ball-front','ball-back','arch-inner','arch-outer','mid','heel','achilles','top','ankle-front','ankle-back','ankle-inner','ankle-outer'];
 
 let recs=[],hosps=[],DB=null;
+let curGraphRange=7;
 let selZ=new Set(); // 현재 탭 선택된 zones
 let zonePain={}; // {zoneId: painLevel} 부위별 통증
 let footData={
@@ -1038,7 +1039,6 @@ function quickCopy(){
 }
 
 // ── 홈 ──
-let curGraphRange=7;
 function setGraphRange(days){
   curGraphRange=days;
   [7,30,90].forEach(d=>{
