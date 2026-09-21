@@ -1,8 +1,8 @@
 # 👣 발 통증 일기
 
-발 통증을 기록하고 AI로 분석하는 개인 웹앱
+발/손 통증을 기록하고 AI로 분석하는 개인 웹앱
 
-**앱 주소**: https://super-cucurucho-20002f.netlify.app
+**앱 주소**: https://schoyeon.github.io/foot
 
 ---
 
@@ -21,7 +21,7 @@
 
 ### 3단계 - 자동 배포
 - 1~2분 후 앱에 자동 반영 ✅
-- Netlify가 GitHub 변경사항을 자동으로 감지
+- GitHub Pages가 자동으로 감지
 
 ---
 
@@ -29,7 +29,7 @@
 
 | 역할 | 서비스 |
 |------|--------|
-| 앱 호스팅 | Netlify |
+| 앱 호스팅 | GitHub Pages |
 | 데이터베이스 | Supabase |
 | 코드 저장소 | GitHub (이 저장소) |
 
@@ -50,7 +50,6 @@
 ---
 
 ## 💾 데이터베이스 정보
-
 - **Supabase 프로젝트**: https://wblndotsbuejihjembjz.supabase.co
 - **테이블**: `records` (통증 기록), `hosps` (병원 기록)
 - 데이터는 Supabase에 안전하게 저장됩니다
