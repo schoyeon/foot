@@ -641,6 +641,7 @@ let curHand='left';
 let selZ=new Set();
 let zonePain={};
 let footData={left:{zones:new Set(),zpain:{},pain:5},right:{zones:new Set(),zpain:{},pain:5}};
+let handData={left:{zones:new Set(),zpain:{},pain:5},right:{zones:new Set(),zpain:{},pain:5}};
 let zpopZone=null,zpopMode='log';
 let editId=null,eFoot='left',eDelConf=false,editZonePain={};
 let hospEditId=null,hospDelConf=false;
@@ -742,8 +743,10 @@ function setBodyPart(part){
   selZ=new Set();zonePain={};
   if(part==='foot'){
     footData={left:{zones:new Set(),zpain:{},pain:5},right:{zones:new Set(),zpain:{},pain:5}};
+  handData={left:{zones:new Set(),zpain:{},pain:5},right:{zones:new Set(),zpain:{},pain:5}};
     switchFoot('left');
   } else {
+    handData={left:{zones:new Set(),zpain:{},pain:5},right:{zones:new Set(),zpain:{},pain:5}};
     switchHand('left');
   }
 }
@@ -766,7 +769,13 @@ function switchFoot(f){
   loadFootData(f);
 }
 
+function saveHandData(){
+  handData[curHand].zones=new Set(selZ);
+  handData[curHand].zpain={...zonePain};
+  handData[curHand].pain=+document.getElementById('pain-slider').value;
+}
 function switchHand(h){
+  saveHandData();
   curHand=h;
   ['left','right'].forEach(x=>{
     const el=document.getElementById('ht-'+x);
@@ -778,10 +787,22 @@ function switchHand(h){
   document.getElementById('foot-pain-title').textContent=(h==='left'?'왼손':'오른손')+' · 통증 강도 ';
   document.getElementById('svg-left-hand').style.display=h==='left'?'block':'none';
   document.getElementById('svg-right-hand').style.display=h==='right'?'block':'none';
-  // zone 초기화
-  selZ=new Set();zonePain={};
+  // handData 로드
+  selZ=new Set(handData[h].zones);
+  zonePain={...handData[h].zpain};
   document.querySelectorAll('#hand-zone-chips .zc').forEach(e=>{e.classList.remove('on');const b=e.querySelector('.zc-pain');if(b)b.remove();});
   document.querySelectorAll('.hfz').forEach(e=>e.setAttribute('data-on','0'));
+  selZ.forEach(id=>{
+    const el=getSVGEl(id);if(el)el.setAttribute('data-on','1');
+    document.getElementById('zc-'+id)?.classList.add('on');
+    updZoneChipPain(id,zonePain[id]||null);
+  });
+  const pains=Object.values(zonePain);
+  const avgP=pains.length?Math.round(pains.reduce((s,v)=>s+v,0)/pains.length):handData[h].pain;
+  document.getElementById('pain-slider').value=avgP;
+  const b=document.getElementById('pain-badge');
+  if(pains.length){b.textContent=avgP;b.style.background=bgc(avgP);b.style.color=fgc(avgP);}
+  else{b.textContent='–';b.style.background='';b.style.color='';}
 }
 
 function saveCurFootData(){
@@ -797,13 +818,8 @@ function loadFootData(f){
   if(activeSvg)activeSvg.querySelectorAll('.fz').forEach(e=>e.setAttribute('data-on','0'));
   document.querySelectorAll('#foot-zone-chips .zc').forEach(e=>{e.classList.remove('on');const b=e.querySelector('.zc-pain');if(b)b.remove();});
   selZ.forEach(id=>{
-    const sv=SVGM[id];
-    const svEl=f==='left'?document.getElementById('fz-left-'+id.replace('ankle-','').replace('front','af').replace('back','ab').replace('inner','ai').replace('outer','ao')):document.getElementById(sv);
-    if(svEl)svEl.setAttribute('data-on','1');
-    else{
-      const leftEl=document.getElementById('fz-left-'+Object.keys(SVGM).find(k=>SVGM[k]===sv)?.replace('ankle-','').replace('front','af').replace('back','ab').replace('inner','ai').replace('outer','ao'));
-      if(f==='left'&&leftEl)leftEl.setAttribute('data-on','1');
-    }
+    const el=getSVGEl(id);
+    if(el)el.setAttribute('data-on','1');
     document.getElementById('zc-'+id)?.classList.add('on');
     updZoneChipPain(id,zonePain[id]||null);
   });
@@ -827,11 +843,16 @@ function copyFromLeft(){
 // ── SVG 클릭 ──
 function getSVGEl(id){
   if(bodyPart==='hand'){
-    const isLeft=curHand==='left';
-    return isLeft?document.getElementById('hfz-left-'+id):document.getElementById('hfz-'+id);
+    return curHand==='left'
+      ?document.getElementById('hfz-left-'+id)
+      :document.getElementById('hfz-'+id);
   }
-  const svKey=SVGM[id];if(!svKey)return null;
-  return curFoot==='left'?document.getElementById('fz-left-'+svKey.replace('fz-','').replace('ankle-front','af').replace('ankle-back','ab').replace('ankle-inner','ai').replace('ankle-outer','ao')):document.getElementById(svKey);
+  // 발: 왼발은 fz-left-{id}, 오른발은 SVGM 사용
+  if(curFoot==='left'){
+    return document.getElementById('fz-left-'+id);
+  }
+  const svKey=SVGM[id];
+  return svKey?document.getElementById(svKey):null;
 }
 
 function tzClick(id){
@@ -882,6 +903,7 @@ function onPainSlide(v){const b=document.getElementById('pain-badge');b.textCont
 // ── 저장 ──
 async function saveRec(){
   if(bodyPart==='foot')saveCurFootData();
+  else saveHandData();
   const types=[...document.querySelectorAll('#p-log .chip.on')].map(c=>c.textContent);
   const sits=[...document.querySelectorAll('#p-log .schip.on')].map(c=>c.textContent);
   const note=document.getElementById('note-input').value.trim();
@@ -893,8 +915,8 @@ async function saveRec(){
     feetToSave=(['left','right']).filter(f=>footData[f].zones.size>0);
     if(!feetToSave.length){toast('아픈 부위를 선택해주세요');return;}
   } else {
-    if(!selZ.size){toast('아픈 부위를 선택해주세요');return;}
-    feetToSave=[curHand];
+    feetToSave=(['left','right']).filter(f=>handData[f].zones.size>0);
+    if(!feetToSave.length){toast('아픈 부위를 선택해주세요');return;}
   }
 
   const saved=[];
@@ -908,10 +930,11 @@ async function saveRec(){
       const vals=Object.values(zpainObj);
       avgPain=vals.length?Math.round(vals.reduce((s,v)=>s+v,0)/vals.length*10)/10:footData[f].pain;
     } else {
-      zones=[...selZ];
-      zpainObj={...zonePain};
+      // 손: 왼손/오른손 각각 저장
+      zones=[...handData[f].zones];
+      zpainObj={...handData[f].zpain};
       const vals=Object.values(zpainObj);
-      avgPain=vals.length?Math.round(vals.reduce((s,v)=>s+v,0)/vals.length*10)/10:+document.getElementById('pain-slider').value;
+      avgPain=vals.length?Math.round(vals.reduce((s,v)=>s+v,0)/vals.length*10)/10:handData[f].pain;
     }
     const rec={id:baseId+fi,ts,foot:f,bodyPart,zones,zoneLabels:zones.map(z=>ZL[z]||z),pain:avgPain,zonePain:{...zpainObj},types,situations:sits,note};
     saved.push(rec);recs.unshift(rec);
@@ -922,6 +945,7 @@ async function saveRec(){
   // 초기화
   selZ=new Set();zonePain={};
   footData={left:{zones:new Set(),zpain:{},pain:5},right:{zones:new Set(),zpain:{},pain:5}};
+  handData={left:{zones:new Set(),zpain:{},pain:5},right:{zones:new Set(),zpain:{},pain:5}};
   document.querySelectorAll('#p-log .zc').forEach(e=>{e.classList.remove('on');const b=e.querySelector('.zc-pain');if(b)b.remove();});
   document.querySelectorAll('#p-log .chip,#p-log .schip').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.fz,.hfz').forEach(e=>e.setAttribute('data-on','0'));
