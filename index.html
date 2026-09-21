@@ -490,6 +490,24 @@ textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:10
     <div style="font-size:20px;font-weight:700;">병원 기록</div>
     <button onclick="openHospSheet(null)" style="background:var(--dark);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;">+ 추가</button>
   </div>
+  <!-- 병원 달력 -->
+  <div style="margin:12px 16px 0;background:var(--surf);border-radius:var(--r);border:1px solid var(--border);padding:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <button onclick="hospCalPrev()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink2);">‹</button>
+      <div id="hosp-cal-title" style="font-size:14px;font-weight:600;"></div>
+      <button onclick="hospCalNext()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink2);">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">
+      <div style="text-align:center;font-size:10px;color:var(--ink3);padding:2px;">일</div>
+      <div style="text-align:center;font-size:10px;color:var(--ink3);padding:2px;">월</div>
+      <div style="text-align:center;font-size:10px;color:var(--ink3);padding:2px;">화</div>
+      <div style="text-align:center;font-size:10px;color:var(--ink3);padding:2px;">수</div>
+      <div style="text-align:center;font-size:10px;color:var(--ink3);padding:2px;">목</div>
+      <div style="text-align:center;font-size:10px;color:var(--ink3);padding:2px;">금</div>
+      <div style="text-align:center;font-size:10px;color:var(--ink3);padding:2px;">토</div>
+    </div>
+    <div id="hosp-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;"></div>
+  </div>
   <div id="hosp-compare"></div>
   <div id="hosp-list" style="margin-top:8px;"></div>
 </div>
@@ -498,7 +516,7 @@ textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:10
 <div class="page" id="p-ai">
   <div style="padding:20px 16px 0;font-size:20px;font-weight:700;">AI 분석</div>
   <div class="card" style="margin-top:12px;">
-    <div class="card-body" style="font-size:13px;color:var(--ink2);line-height:1.6;">최근 기록을 바탕으로 족부 전문의 관점에서 분석해드려요.</div>
+    <div class="card-body" style="font-size:13px;color:var(--ink2);line-height:1.6;">버튼을 누르면 분석 프롬프트가 복사돼요.<br>Claude.ai에 붙여넣으면 AI가 분석해줘요! 🤖</div>
   </div>
   <button class="ai-btn" onclick="runAI()">🔍 AI 분석 시작</button>
   <div style="margin:0 16px;" id="ai-area"></div>
@@ -571,6 +589,18 @@ textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:10
     <input type="text" id="h-hosp" class="sheet-input" placeholder="○○병원">
     <div class="sheet-lbl">진단</div>
     <input type="text" id="h-diag" class="sheet-input" placeholder="족저근막염…">
+    <div class="sheet-lbl">치료 부위</div>
+    <div id="h-body-zones" class="chips" style="margin-bottom:8px;">
+      <div class="chip" data-v="발목" onclick="this.classList.toggle('on')">🦶 발목</div>
+      <div class="chip" data-v="손목" onclick="this.classList.toggle('on')">✋ 손목</div>
+      <div class="chip" data-v="발뒤꿈치" onclick="this.classList.toggle('on')">발뒤꿈치</div>
+      <div class="chip" data-v="아킬레스건" onclick="this.classList.toggle('on')">아킬레스건</div>
+      <div class="chip" data-v="아치" onclick="this.classList.toggle('on')">아치</div>
+      <div class="chip" data-v="발볼" onclick="this.classList.toggle('on')">발볼</div>
+      <div class="chip" data-v="발가락" onclick="this.classList.toggle('on')">발가락</div>
+      <div class="chip" data-v="손가락" onclick="this.classList.toggle('on')">손가락</div>
+      <div class="chip" data-v="손바닥" onclick="this.classList.toggle('on')">손바닥</div>
+    </div>
     <div class="sheet-lbl">치료내용</div>
     <div id="h-treats" class="chips" style="margin-bottom:8px;">
       <div class="chip" data-v="물리치료" onclick="this.classList.toggle('on')">물리치료</div>
@@ -579,6 +609,7 @@ textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:10
       <div class="chip" data-v="수술" onclick="this.classList.toggle('on')">수술</div>
       <div class="chip" data-v="깔창처방" onclick="this.classList.toggle('on')">깔창처방</div>
       <div class="chip" data-v="체외충격파" onclick="this.classList.toggle('on')">체외충격파</div>
+      <div class="chip" data-v="도수치료" onclick="this.classList.toggle('on')">도수치료</div>
     </div>
     <div class="sheet-lbl">당시 통증강도 (1-10)</div>
     <div style="display:flex;align-items:center;gap:12px;">
@@ -634,8 +665,8 @@ async function sbDelete(table,id){return sbFetch(table,'DELETE',null,`?id=eq.${i
 function safeJSON(s,def){try{return s?JSON.parse(s):def;}catch(e){return def;}}
 function toRow(r){return{id:r.id,ts:r.ts,foot:r.foot||'left',body_part:r.bodyPart||'foot',zones:JSON.stringify(r.zones||[]),zone_labels:JSON.stringify(r.zoneLabels||[]),zone_pain:JSON.stringify(r.zonePain||{}),pain:r.pain||5,types:JSON.stringify(r.types||[]),situations:JSON.stringify(r.situations||[]),note:r.note||''};}
 function fromRow(r){return{id:r.id,ts:r.ts,foot:r.foot||'left',bodyPart:r.body_part||'foot',zones:safeJSON(r.zones,[]),zoneLabels:safeJSON(r.zone_labels,[]),zonePain:safeJSON(r.zone_pain,{}),pain:r.pain||5,types:safeJSON(r.types,[]),situations:safeJSON(r.situations,[]),note:r.note||''};}
-function toHospRow(h){return{id:h.id,date:h.date,dept:h.dept||'',hospital:h.hospital||'',diag:h.diag||'',treats:JSON.stringify(h.treats||[]),pain:h.pain||0,next:h.next||'',note:h.note||''};}
-function fromHospRow(h){return{...h,treats:safeJSON(h.treats,[])};}
+function toHospRow(h){return{id:h.id,date:h.date,dept:h.dept||'',hospital:h.hospital||'',diag:h.diag||'',body_zones:JSON.stringify(h.bodyZones||[]),treats:JSON.stringify(h.treats||[]),pain:h.pain||0,next:h.next||'',note:h.note||''};}
+function fromHospRow(h){return{...h,treats:safeJSON(h.treats,[]),bodyZones:safeJSON(h.body_zones,[])};}
 
 // ── 전역 변수 ──
 let recs=[],hosps=[];
@@ -1223,16 +1254,57 @@ function confirmDelRec(){
 document.getElementById('edit-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeEdit();});
 
 // ── 병원 ──
+let hospCalYear=new Date().getFullYear(),hospCalMonth=new Date().getMonth();
+
+function hospCalPrev(){hospCalMonth--;if(hospCalMonth<0){hospCalMonth=11;hospCalYear--;}renderHospCal();}
+function hospCalNext(){hospCalMonth++;if(hospCalMonth>11){hospCalMonth=0;hospCalYear++;}renderHospCal();}
+
+function renderHospCal(){
+  const months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  document.getElementById('hosp-cal-title').textContent=`${hospCalYear}년 ${months[hospCalMonth]}`;
+  const grid=document.getElementById('hosp-cal-grid');grid.innerHTML='';
+  const first=new Date(hospCalYear,hospCalMonth,1);
+  const last=new Date(hospCalYear,hospCalMonth+1,0);
+  const today=new Date();
+  // 빈칸
+  for(let i=0;i<first.getDay();i++){
+    grid.innerHTML+=`<div></div>`;
+  }
+  for(let d=1;d<=last.getDate();d++){
+    const dateStr=`${hospCalYear}-${p2(hospCalMonth+1)}-${p2(d)}`;
+    const dayHosps=hosps.filter(h=>h.date===dateStr);
+    const isToday=today.getFullYear()===hospCalYear&&today.getMonth()===hospCalMonth&&today.getDate()===d;
+    const hasBg=dayHosps.length?'background:var(--acc);color:#fff;':'';
+    const todayBorder=isToday&&!dayHosps.length?'box-shadow:0 0 0 1.5px var(--acc);':'';
+    grid.innerHTML+=`<div onclick="hospCalClick('${dateStr}')" style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;margin:1px auto;${hasBg}${todayBorder}font-weight:${dayHosps.length?700:400};">${d}${dayHosps.length?'<span style="position:absolute;top:2px;right:2px;width:4px;height:4px;border-radius:50%;background:#fff;display:none;"></span>':''}</div>`;
+  }
+}
+
+function hospCalClick(dateStr){
+  // 해당 날짜 병원 기록으로 스크롤
+  const h=hosps.find(h=>h.date===dateStr);
+  if(h)openHospSheet(h.id);
+  else{
+    // 해당 날짜로 새 기록 추가
+    openHospSheet(null);
+    setTimeout(()=>{document.getElementById('h-date').value=dateStr;},50);
+  }
+}
+
 function renderHosp(){
+  renderHospCal();
   renderHospCompare();
   const hl=document.getElementById('hosp-list');hl.innerHTML='';
-  if(!hosps.length){hl.innerHTML='<div style="text-align:center;padding:30px;color:var(--ink3);">병원 기록이 없어요</div>';return;}
+  if(!hosps.length){hl.innerHTML='<div style="text-align:center;padding:30px;color:var(--ink3);">병원 기록이 없어요<br><span style="font-size:12px;">+ 추가로 기록해보세요</span></div>';return;}
   [...hosps].sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(h=>{
+    const zones=(h.bodyZones||[]).map(z=>`<span class="hosp-tag" style="background:var(--acc-s);color:var(--dark);">${z}</span>`).join('');
     hl.innerHTML+=`<div class="hosp-card" onclick="openHospSheet(${h.id})">
-      <div class="hosp-date">${h.date} · ${h.dept||''}  ${h.hospital||''}</div>
+      <div class="hosp-date">${h.date} · ${h.dept||''} ${h.hospital||''}</div>
       <div class="hosp-title">${h.diag||'진단 없음'}</div>
-      <div class="hosp-tags">${(h.treats||[]).map(t=>`<span class="hosp-tag">${t}</span>`).join('')}${h.pain?`<span class="hosp-tag" style="background:${bgc(h.pain)};color:${fgc(h.pain)};">통증 ${h.pain}</span>`:''}</div>
-      ${h.next?`<div style="font-size:11px;color:var(--acc);margin-top:6px;">다음 예약: ${h.next}</div>`:''}
+      ${zones?`<div class="hosp-tags" style="margin-top:4px;">${zones}</div>`:''}
+      <div class="hosp-tags" style="margin-top:4px;">${(h.treats||[]).map(t=>`<span class="hosp-tag">${t}</span>`).join('')}${h.pain?`<span class="hosp-tag" style="background:${bgc(h.pain)};color:${fgc(h.pain)};">통증 ${h.pain}</span>`:''}</div>
+      ${h.next?`<div style="font-size:11px;color:var(--acc);margin-top:6px;">📅 다음 예약: ${h.next}</div>`:''}
+      ${h.note?`<div style="font-size:11px;color:var(--ink3);margin-top:4px;">${h.note}</div>`:''}
     </div>`;
   });
 }
@@ -1256,6 +1328,7 @@ function openHospSheet(id){
   document.getElementById('h-dept').value=h?.dept||'';
   document.getElementById('h-hosp').value=h?.hospital||'';
   document.getElementById('h-diag').value=h?.diag||'';
+  document.querySelectorAll('#h-body-zones .chip').forEach(c=>c.classList.toggle('on',(h?.bodyZones||[]).includes(c.dataset.v)));
   document.querySelectorAll('#h-treats .chip').forEach(c=>c.classList.toggle('on',(h?.treats||[]).includes(c.dataset.v)));
   document.getElementById('h-pain').value=h?.pain||5;updHPain(h?.pain||5);
   document.getElementById('h-next').value=h?.next||'';
@@ -1268,7 +1341,7 @@ function closeHospSheet(){document.getElementById('hosp-overlay').classList.remo
 function updHPain(v){const b=document.getElementById('h-pain-badge');b.textContent=v;b.style.background=bgc(v);b.style.color=fgc(v);}
 
 async function saveHosp(){
-  const h={id:hospEditId||Date.now(),date:document.getElementById('h-date').value,dept:document.getElementById('h-dept').value.trim(),hospital:document.getElementById('h-hosp').value.trim(),diag:document.getElementById('h-diag').value.trim(),treats:[...document.querySelectorAll('#h-treats .chip.on')].map(c=>c.dataset.v),pain:+document.getElementById('h-pain').value,next:document.getElementById('h-next').value,note:document.getElementById('h-note').value.trim()};
+  const h={id:hospEditId||Date.now(),date:document.getElementById('h-date').value,dept:document.getElementById('h-dept').value.trim(),hospital:document.getElementById('h-hosp').value.trim(),diag:document.getElementById('h-diag').value.trim(),bodyZones:[...document.querySelectorAll('#h-body-zones .chip.on')].map(c=>c.dataset.v),treats:[...document.querySelectorAll('#h-treats .chip.on')].map(c=>c.dataset.v),pain:+document.getElementById('h-pain').value,next:document.getElementById('h-next').value,note:document.getElementById('h-note').value.trim()};
   if(hospEditId)hosps=hosps.map(x=>x.id===hospEditId?h:x);else hosps.unshift(h);
   localStorage.setItem('fp3h',JSON.stringify(hosps));
   try{await sbUpsert('hosps',toHospRow(h));}catch(e){}
@@ -1288,31 +1361,29 @@ function confirmDelHosp(){
 document.getElementById('hosp-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeHospSheet();});
 
 // ── AI 분석 ──
-async function runAI(){
-  const btn=document.querySelector('.ai-btn');
-  btn.textContent='🔍 분석 중…';btn.disabled=true;
+function runAI(){
+  const last30=recs.slice(0,30);
+  if(!last30.length){toast('기록이 없어요!');return;}
+  const summary=last30.map(r=>`[${fmtD(r.ts)} ${fmtT(r.ts)}] ${flabel(r.foot,r.bodyPart)} ${(r.zoneLabels||[]).join(',')} 통증${r.pain} ${(r.situations||[]).join(' ')}${r.note?' 메모:'+r.note:''}`).join('\n');
+  const hospSummary=hosps.slice(0,5).map(h=>`[${h.date}] ${h.dept||''} ${h.hospital||''} 진단:${h.diag||''} 치료부위:${(h.bodyZones||[]).join(',')} 치료:${(h.treats||[]).join(',')} 통증${h.pain}`).join('\n');
+  const prompt=`당신은 20년 경력의 족부 전문의입니다. 아래 통증 기록을 분석해서 한국어로 답해주세요.\n\n발/손 통증 기록 (최근 30개):\n${summary}\n\n병원 기록:\n${hospSummary||'없음'}\n\n위 기록을 바탕으로:\n1) 통증 패턴 분석\n2) 의심되는 원인\n3) 주의사항 및 권고사항\n을 각각 구체적으로 설명해주세요.`;
   const area=document.getElementById('ai-area');
-  area.innerHTML='<div style="text-align:center;padding:20px;color:var(--ink3);">분석 중이에요…</div>';
-  try{
-    const last30=recs.slice(0,30);
-    const summary=last30.map(r=>`[${fmtD(r.ts)} ${fmtT(r.ts)}] ${flabel(r.foot,r.bodyPart)} ${(r.zoneLabels||[]).join(',')} 통증${r.pain} ${(r.situations||[]).join(' ')}`).join('\n');
-    const hospSummary=hosps.slice(0,5).map(h=>`[${h.date}] ${h.dept} ${h.diag} 통증${h.pain} 치료:${(h.treats||[]).join(',')}`).join('\n');
-    const prompt=`당신은 20년 경력의 족부 전문의입니다. 아래 통증 기록을 분석해서 한국어로 답해주세요.
-
-발/손 통증 기록 (최근 30개):
-${summary}
-
-병원 기록:
-${hospSummary||'없음'}
-
-위 기록을 바탕으로: 1) 통증 패턴 분석 2) 의심되는 원인 3) 주의사항 및 권고사항을 각각 구체적으로 설명해주세요.`;
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
-    const data=await res.json();
-    const text=data.content?.map(c=>c.text||'').join('')||'분석 결과를 가져올 수 없어요.';
-    aiResult=text;
-    area.innerHTML=`<div class="card" style="margin-top:12px;"><div class="card-body"><div class="ai-result">${text.replace(/\n/g,'<br>')}</div></div></div>`;
-  }catch(e){area.innerHTML=`<div style="text-align:center;padding:20px;color:var(--red);">분석 중 오류가 발생했어요</div>`;}
-  btn.textContent='🔍 AI 분석 시작';btn.disabled=false;
+  const showResult=()=>{
+    area.innerHTML=`<div class="card" style="margin-top:12px;"><div class="card-body">
+      <div style="font-size:14px;font-weight:600;margin-bottom:8px;">📋 분석 프롬프트가 복사됐어요!</div>
+      <div style="font-size:13px;color:var(--ink2);line-height:1.8;margin-bottom:14px;">1. Claude.ai 접속<br>2. 새 대화 시작<br>3. 복사된 내용 붙여넣기<br>4. 전송하면 AI가 분석!</div>
+      <a href="https://claude.ai" target="_blank" style="display:block;padding:13px;background:var(--dark);color:#fff;border-radius:20px;text-align:center;font-size:14px;font-weight:600;text-decoration:none;">Claude.ai 열기 →</a>
+    </div></div>`;
+  };
+  navigator.clipboard.writeText(prompt).then(()=>{
+    showResult();toast('📋 복사됐어요! Claude.ai에 붙여넣으세요');
+  }).catch(()=>{
+    area.innerHTML=`<div class="card" style="margin-top:12px;"><div class="card-body">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">아래 내용을 복사해서 Claude.ai에 붙여넣으세요</div>
+      <textarea style="width:100%;height:140px;font-size:11px;border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surf2);" readonly>${prompt}</textarea>
+      <a href="https://claude.ai" target="_blank" style="display:block;margin-top:10px;padding:13px;background:var(--dark);color:#fff;border-radius:20px;text-align:center;font-size:14px;font-weight:600;text-decoration:none;">Claude.ai 열기 →</a>
+    </div></div>`;
+  });
 }
 
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2400);}
