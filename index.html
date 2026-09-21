@@ -267,9 +267,9 @@ textarea:focus{border-color:var(--acc);}
     <div class="graph-header">
       <div class="graph-title">통증 추이</div>
       <div class="graph-tabs">
+        <button class="graph-tab" id="gt-1" onclick="setGraphRange(1)">오늘</button>
         <button class="graph-tab on" id="gt-7" onclick="setGraphRange(7)">7일</button>
         <button class="graph-tab" id="gt-30" onclick="setGraphRange(30)">30일</button>
-        <button class="graph-tab" id="gt-90" onclick="setGraphRange(90)">90일</button>
       </div>
     </div>
     <canvas id="pain-graph" height="80" style="width:100%;display:block;"></canvas>
@@ -286,9 +286,14 @@ textarea:focus{border-color:var(--acc);}
 <!-- 기록 폼 -->
 <div class="page" id="p-log">
   <div style="padding:16px 16px 0;display:flex;justify-content:space-between;align-items:center;">
-    <button onclick="showPage('home')" style="background:none;border:none;cursor:pointer;padding:6px 10px 6px 0;font-size:14px;color:var(--ink2);display:flex;align-items:center;gap:4px;">‹ 홈</button>
+    <button onclick="showPage('home')" style="background:none;border:none;cursor:pointer;padding:6px 10px 6px 0;font-size:14px;color:var(--ink2);">‹ 홈</button>
     <div style="font-size:18px;font-weight:700;">통증 기록</div>
     <button class="big-btn" style="width:auto;margin:0;padding:8px 18px;font-size:13px;" onclick="saveRec()">저장</button>
+  </div>
+  <!-- 발/손 전환 -->
+  <div style="display:flex;gap:0;margin:10px 16px 0;background:var(--surf2);border-radius:12px;padding:4px;">
+    <div id="bp-foot" onclick="setBodyPart('foot')" style="flex:1;padding:8px;border-radius:9px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;background:var(--dark);color:#fff;transition:all .15s;">🦶 발</div>
+    <div id="bp-hand" onclick="setBodyPart('hand')" style="flex:1;padding:8px;border-radius:9px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink3);transition:all .15s;">✋ 손</div>
   </div>
   <div style="padding:8px 16px 0;">
     <div class="form-lbl">날짜 · 시간 <span style="font-weight:400;font-size:10px;text-transform:none;letter-spacing:0;">(과거 기록도 가능)</span></div>
@@ -298,6 +303,7 @@ textarea:focus{border-color:var(--acc);}
     </div>
   </div>
   <!-- 발 탭 선택 -->
+  <div id="foot-tab-wrap">
   <div style="display:flex;gap:0;margin:12px 16px 0;background:var(--surf2);border-radius:12px;padding:4px;">
     <div id="ft-left" onclick="switchFoot('left')" style="flex:1;padding:10px;border-radius:9px;text-align:center;font-size:14px;font-weight:600;cursor:pointer;background:var(--dark);color:#fff;transition:all .15s;">👣 왼발</div>
     <div id="ft-right" onclick="switchFoot('right')" style="flex:1;padding:10px;border-radius:9px;text-align:center;font-size:14px;font-weight:600;cursor:pointer;color:var(--ink3);transition:all .15s;">👣 오른발</div>
@@ -310,7 +316,7 @@ textarea:focus{border-color:var(--acc);}
   <div class="card">
     <div class="card-title" id="foot-zone-title">왼발 · 아픈 부위</div>
     <div class="card-body" style="padding-top:8px;">
-      <div style="display:flex;justify-content:center;padding:4px 0 12px;">
+      <div id="foot-svg-wrap" style="display:flex;justify-content:center;padding:4px 0 12px;">
         <!-- 왼발 SVG: 엄지=오른쪽, 새끼=왼쪽 -->
         <svg id="svg-left" width="200" viewBox="0 0 260 420" xmlns="http://www.w3.org/2000/svg" style="display:block;">
           <defs><style>
@@ -417,7 +423,119 @@ textarea:focus{border-color:var(--acc);}
         </svg>
       </div>
 
-      <div class="zone-chips">
+      <!-- 손 SVG -->
+      <div id="hand-svg-wrap" style="display:none;justify-content:center;padding:4px 0 12px;">
+        <!-- 왼손 SVG -->
+        <svg id="svg-left-hand" width="200" viewBox="0 0 260 380" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+          <defs><style>
+            .hfb{fill:#f0ede6;stroke:#d4c8b8;stroke-width:1.5;}
+            @media(prefers-color-scheme:dark){.hfb{fill:#2a2825;stroke:#3a3632;}}
+            .hfl{font-family:-apple-system,sans-serif;font-size:8px;fill:#8a7e6e;text-anchor:middle;pointer-events:none;font-weight:500;}
+            .hfz{cursor:pointer;} .hfz:hover{opacity:.8;}
+            .hfz[data-on="1"]{fill:#FAC9B0!important;stroke:#B86A48!important;stroke-width:2px!important;}
+          </style></defs>
+          <!-- 손바닥 외곽 (왼손: 엄지=오른쪽) -->
+          <path class="hfb" d="M80,280 C60,275 48,255 46,230 C44,205 50,180 58,160 C66,140 75,125 82,115 L90,105 C94,95 96,82 94,70 C92,58 88,50 90,44 C92,38 100,36 108,40 C114,43 116,52 116,62 L116,90 C118,80 118,66 120,56 C122,46 128,40 136,42 C144,44 146,54 144,66 L142,92 C144,82 146,68 150,58 C153,48 160,44 167,47 C174,50 175,62 172,74 L168,98 C170,90 174,78 178,70 C182,62 188,60 194,64 C200,68 200,80 196,94 L188,130 C196,120 202,115 208,118 C214,121 214,132 210,146 C206,160 196,178 186,198 C176,218 168,240 166,262 C164,278 160,290 148,295 C130,302 100,285 80,280 Z"/>
+          <!-- 손볼(앞) -->
+          <ellipse id="hfz-left-hball" class="hfz" fill="#ede8e1" stroke="#d4c8b8" stroke-width="1.5" cx="130" cy="200" rx="46" ry="14" onclick="tzClick('hball')"/>
+          <!-- 손바닥 가운데 -->
+          <ellipse id="hfz-left-hmid" class="hfz" fill="#ede8e0" stroke="#d4c8b8" stroke-width="1.5" cx="126" cy="228" rx="40" ry="18" onclick="tzClick('hmid')"/>
+          <!-- 손바닥 뒤쪽 -->
+          <ellipse id="hfz-left-hpalm" class="hfz" fill="#e8e2da" stroke="#d4c8b8" stroke-width="1.5" cx="120" cy="260" rx="38" ry="18" onclick="tzClick('hpalm')"/>
+          <!-- 손등 -->
+          <ellipse id="hfz-left-hback" class="hfz" fill="#f0ede6" stroke="#d4c8b8" stroke-width="1.5" cx="130" cy="228" rx="38" ry="40" style="display:none;" onclick="tzClick('hback')"/>
+          <!-- 엄지 기저부 -->
+          <ellipse id="hfz-left-hthumb-base" class="hfz" fill="#e8e3db" stroke="#d4c8b8" stroke-width="1.5" cx="170" cy="220" rx="22" ry="28" onclick="tzClick('hthumb-base')"/>
+          <!-- 손가락 (왼손: 엄지=오른쪽) -->
+          <rect id="hfz-left-hfinger1" class="hfz hfb" x="170" y="52" width="32" height="58" rx="16" onclick="tzClick('hfinger1')"/>
+          <rect id="hfz-left-hfinger2" class="hfz hfb" x="134" y="30" width="26" height="68" rx="13" onclick="tzClick('hfinger2')"/>
+          <rect id="hfz-left-hfinger3" class="hfz hfb" x="106" y="22" width="24" height="72" rx="12" onclick="tzClick('hfinger3')"/>
+          <rect id="hfz-left-hfinger4" class="hfz hfb" x="80" y="28" width="22" height="68" rx="11" onclick="tzClick('hfinger4')"/>
+          <rect id="hfz-left-hfinger5" class="hfz hfb" x="56" y="38" width="20" height="60" rx="10" onclick="tzClick('hfinger5')"/>
+          <!-- 손가락 사이 -->
+          <circle id="hfz-left-hgap1" class="hfz" fill="#e4dfd8" stroke="#d4c8b8" stroke-width="1" cx="165" cy="115" r="7" onclick="tzClick('hgap1')"/>
+          <circle id="hfz-left-hgap2" class="hfz" fill="#e4dfd8" stroke="#d4c8b8" stroke-width="1" cx="138" cy="105" r="6" onclick="tzClick('hgap2')"/>
+          <circle id="hfz-left-hgap3" class="hfz" fill="#e4dfd8" stroke="#d4c8b8" stroke-width="1" cx="111" cy="103" r="6" onclick="tzClick('hgap3')"/>
+          <circle id="hfz-left-hgap4" class="hfz" fill="#e4dfd8" stroke="#d4c8b8" stroke-width="1" cx="84" cy="108" r="5" onclick="tzClick('hgap4')"/>
+          <!-- 손목 -->
+          <rect id="hfz-left-hwrist-outer" class="hfz hfb" x="16" y="296" width="46" height="14" rx="7" onclick="tzClick('hwrist-outer')"/>
+          <rect id="hfz-left-hwrist-front" class="hfz hfb" x="70" y="304" width="42" height="14" rx="7" onclick="tzClick('hwrist-front')"/>
+          <rect id="hfz-left-hwrist-back" class="hfz hfb" x="120" y="296" width="42" height="14" rx="7" onclick="tzClick('hwrist-back')"/>
+          <rect id="hfz-left-hwrist-inner" class="hfz hfb" x="170" y="304" width="48" height="14" rx="7" onclick="tzClick('hwrist-inner')"/>
+          <!-- 라벨 -->
+          <text x="186" y="72" class="hfl">엄지</text><text x="147" y="52" class="hfl">검지</text>
+          <text x="118" y="45" class="hfl">중지</text><text x="91" y="50" class="hfl">약지</text><text x="66" y="58" class="hfl">소지</text>
+          <text x="130" y="203" class="hfl">손볼</text><text x="126" y="231" class="hfl">손바닥</text>
+          <text x="120" y="263" class="hfl">손바닥뒤</text><text x="174" y="222" class="hfl">엄지기저</text>
+          <text x="39" y="308" class="hfl">바깥</text><text x="91" y="316" class="hfl">손목앞</text>
+          <text x="141" y="308" class="hfl">손목뒤</text><text x="194" y="316" class="hfl">안쪽</text>
+        </svg>
+        <!-- 오른손 SVG -->
+        <svg id="svg-right-hand" width="200" viewBox="0 0 260 380" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+          <defs><style>
+            .hfz[data-on="1"]{fill:#FAC9B0!important;stroke:#B86A48!important;stroke-width:2px!important;}
+          </style></defs>
+          <!-- 손바닥 외곽 (오른손: 엄지=왼쪽) -->
+          <path class="hfb" d="M180,280 C200,275 212,255 214,230 C216,205 210,180 202,160 C194,140 185,125 178,115 L170,105 C166,95 164,82 166,70 C168,58 172,50 170,44 C168,38 160,36 152,40 C146,43 144,52 144,62 L144,90 C142,80 142,66 140,56 C138,46 132,40 124,42 C116,44 114,54 116,66 L118,92 C116,82 114,68 110,58 C107,48 100,44 93,47 C86,50 85,62 88,74 L92,98 C90,90 86,78 82,70 C78,62 72,60 66,64 C60,68 60,80 64,94 L72,130 C64,120 58,115 52,118 C46,121 46,132 50,146 C54,160 64,178 74,198 C84,218 92,240 94,262 C96,278 100,290 112,295 C130,302 160,285 180,280 Z"/>
+          <!-- 손볼 -->
+          <ellipse id="hfz-hball" class="hfz" fill="#ede8e1" stroke="#d4c8b8" stroke-width="1.5" cx="130" cy="200" rx="46" ry="14" onclick="tzClick('hball')"/>
+          <!-- 손바닥 가운데 -->
+          <ellipse id="hfz-hmid" class="hfz" fill="#ede8e0" stroke="#d4c8b8" stroke-width="1.5" cx="134" cy="228" rx="40" ry="18" onclick="tzClick('hmid')"/>
+          <!-- 손바닥 뒤쪽 -->
+          <ellipse id="hfz-hpalm" class="hfz" fill="#e8e2da" stroke="#d4c8b8" stroke-width="1.5" cx="140" cy="260" rx="38" ry="18" onclick="tzClick('hpalm')"/>
+          <!-- 엄지 기저부 -->
+          <ellipse id="hfz-hthumb-base" class="hfz" fill="#e8e3db" stroke="#d4c8b8" stroke-width="1.5" cx="90" cy="220" rx="22" ry="28" onclick="tzClick('hthumb-base')"/>
+          <!-- 손가락 (오른손: 엄지=왼쪽) -->
+          <rect id="hfz-hfinger1" class="hfz hfb" x="58" y="52" width="32" height="58" rx="16" onclick="tzClick('hfinger1')"/>
+          <rect id="hfz-hfinger2" class="hfz hfb" x="100" y="30" width="26" height="68" rx="13" onclick="tzClick('hfinger2')"/>
+          <rect id="hfz-hfinger3" class="hfz hfb" x="130" y="22" width="24" height="72" rx="12" onclick="tzClick('hfinger3')"/>
+          <rect id="hfz-hfinger4" class="hfz hfb" x="158" y="28" width="22" height="68" rx="11" onclick="tzClick('hfinger4')"/>
+          <rect id="hfz-hfinger5" class="hfz hfb" x="184" y="38" width="20" height="60" rx="10" onclick="tzClick('hfinger5')"/>
+          <!-- 사이 -->
+          <circle id="hfz-hgap1" class="hfz" fill="#e4dfd8" stroke="#d4c8b8" stroke-width="1" cx="95" cy="115" r="7" onclick="tzClick('hgap1')"/>
+          <circle id="hfz-hgap2" class="hfz" fill="#e4dfd8" stroke="#d4c8b8" stroke-width="1" cx="122" cy="105" r="6" onclick="tzClick('hgap2')"/>
+          <circle id="hfz-hgap3" class="hfz" fill="#e4dfd8" stroke="#d4c8b8" stroke-width="1" cx="149" cy="103" r="6" onclick="tzClick('hgap3')"/>
+          <circle id="hfz-hgap4" class="hfz" fill="#e4dfd8" stroke="#d4c8b8" stroke-width="1" cx="176" cy="108" r="5" onclick="tzClick('hgap4')"/>
+          <!-- 손목 -->
+          <rect id="hfz-hwrist-inner" class="hfz hfb" x="16" y="304" width="48" height="14" rx="7" onclick="tzClick('hwrist-inner')"/>
+          <rect id="hfz-hwrist-front" class="hfz hfb" x="72" y="296" width="42" height="14" rx="7" onclick="tzClick('hwrist-front')"/>
+          <rect id="hfz-hwrist-back" class="hfz hfb" x="122" y="304" width="42" height="14" rx="7" onclick="tzClick('hwrist-back')"/>
+          <rect id="hfz-hwrist-outer" class="hfz hfb" x="172" y="296" width="46" height="14" rx="7" onclick="tzClick('hwrist-outer')"/>
+          <!-- 라벨 -->
+          <text x="74" y="72" class="hfl">엄지</text><text x="113" y="52" class="hfl">검지</text>
+          <text x="142" y="45" class="hfl">중지</text><text x="169" y="50" class="hfl">약지</text><text x="194" y="58" class="hfl">소지</text>
+          <text x="130" y="203" class="hfl">손볼</text><text x="134" y="231" class="hfl">손바닥</text>
+          <text x="140" y="263" class="hfl">손바닥뒤</text><text x="86" y="222" class="hfl">엄지기저</text>
+          <text x="40" y="316" class="hfl">안쪽</text><text x="93" y="308" class="hfl">손목앞</text>
+          <text x="143" y="316" class="hfl">손목뒤</text><text x="195" y="308" class="hfl">바깥</text>
+        </svg>
+      </div>
+      <!-- 손 zone chips -->
+      <div id="hand-zone-chips" class="zone-chips" style="display:none;">
+        <div class="z-sec">손가락</div>
+        <div class="zc" id="zc-hfinger1" onclick="tzClick('hfinger1')"><div class="zdot"></div>엄지</div>
+        <div class="zc" id="zc-hfinger2" onclick="tzClick('hfinger2')"><div class="zdot"></div>검지</div>
+        <div class="zc" id="zc-hfinger3" onclick="tzClick('hfinger3')"><div class="zdot"></div>중지</div>
+        <div class="zc" id="zc-hfinger4" onclick="tzClick('hfinger4')"><div class="zdot"></div>약지</div>
+        <div class="zc" id="zc-hfinger5" onclick="tzClick('hfinger5')"><div class="zdot"></div>소지</div>
+        <div class="z-sec">손가락 사이</div>
+        <div class="zc" id="zc-hgap1" onclick="tzClick('hgap1')"><div class="zdot"></div>사이 1-2</div>
+        <div class="zc" id="zc-hgap2" onclick="tzClick('hgap2')"><div class="zdot"></div>사이 2-3</div>
+        <div class="zc" id="zc-hgap3" onclick="tzClick('hgap3')"><div class="zdot"></div>사이 3-4</div>
+        <div class="zc" id="zc-hgap4" onclick="tzClick('hgap4')"><div class="zdot"></div>사이 4-5</div>
+        <div class="z-sec">손바닥</div>
+        <div class="zc" id="zc-hball" onclick="tzClick('hball')"><div class="zdot"></div>손볼(앞쪽)</div>
+        <div class="zc" id="zc-hmid" onclick="tzClick('hmid')"><div class="zdot"></div>손바닥 가운데</div>
+        <div class="zc" id="zc-hpalm" onclick="tzClick('hpalm')"><div class="zdot"></div>손바닥 뒤쪽</div>
+        <div class="zc" id="zc-hthumb-base" onclick="tzClick('hthumb-base')"><div class="zdot"></div>엄지 기저부</div>
+        <div class="zc" id="zc-hback" onclick="tzClick('hback')"><div class="zdot"></div>손등</div>
+        <div class="z-sec">손목</div>
+        <div class="zc" id="zc-hwrist-front" onclick="tzClick('hwrist-front')"><div class="zdot"></div>손목 앞</div>
+        <div class="zc" id="zc-hwrist-back" onclick="tzClick('hwrist-back')"><div class="zdot"></div>손목 뒤</div>
+        <div class="zc" id="zc-hwrist-inner" onclick="tzClick('hwrist-inner')"><div class="zdot"></div>손목 안쪽</div>
+        <div class="zc" id="zc-hwrist-outer" onclick="tzClick('hwrist-outer')"><div class="zdot"></div>손목 바깥쪽</div>
+      </div>
+      <div id="foot-zone-chips" class="zone-chips">
         <div class="z-sec">발가락</div>
         <div class="zc" id="zc-toe1" onclick="tzClick('toe1')"><div class="zdot"></div>엄지</div>
         <div class="zc" id="zc-toe2" onclick="tzClick('toe2')"><div class="zdot"></div>검지</div>
@@ -686,15 +804,24 @@ textarea:focus{border-color:var(--acc);}
 
 <script>
 // ── 데이터 ──
-const ZL={toe1:'엄지',toe2:'검지',toe3:'중지',toe4:'약지',toe5:'소지',gap1:'사이1-2',gap2:'사이2-3',gap3:'사이3-4',gap4:'사이4-5','ball-front':'발볼 앞쪽','ball-back':'발볼 뒤쪽','arch-inner':'아치 안쪽(내측)','arch-outer':'아치 바깥쪽(외측)',mid:'발바닥 가운데',heel:'발뒤꿈치(발바닥)',achilles:'아킬레스건',top:'발등','ankle-front':'발목 앞','ankle-back':'발목 뒤','ankle-inner':'발목 안쪽','ankle-outer':'발목 바깥쪽'};
+const ZL={toe1:'엄지',toe2:'검지',toe3:'중지',toe4:'약지',toe5:'소지',gap1:'사이1-2',gap2:'사이2-3',gap3:'사이3-4',gap4:'사이4-5','ball-front':'발볼 앞쪽','ball-back':'발볼 뒤쪽','arch-inner':'아치 안쪽(내측)','arch-outer':'아치 바깥쪽(외측)',mid:'발바닥 가운데',heel:'발뒤꿈치(발바닥)',achilles:'아킬레스건',top:'발등','ankle-front':'발목 앞','ankle-back':'발목 뒤','ankle-inner':'발목 안쪽','ankle-outer':'발목 바깥쪽',
+  // 손
+  'hfinger1':'엄지','hfinger2':'검지','hfinger3':'중지','hfinger4':'약지','hfinger5':'소지',
+  'hgap1':'손가락 사이1-2','hgap2':'손가락 사이2-3','hgap3':'손가락 사이3-4','hgap4':'손가락 사이4-5',
+  'hball':'손바닥 앞쪽(손볼)','hmid':'손바닥 가운데','hpalm':'손바닥 뒤쪽',
+  'hback':'손등','hthumb-base':'엄지 기저부',
+  'hwrist-front':'손목 앞','hwrist-back':'손목 뒤','hwrist-inner':'손목 안쪽','hwrist-outer':'손목 바깥쪽'
+};
 const SVGM={toe1:'fz-toe1',toe2:'fz-toe2',toe3:'fz-toe3',toe4:'fz-toe4',toe5:'fz-toe5',gap1:'fz-gap1',gap2:'fz-gap2',gap3:'fz-gap3',gap4:'fz-gap4','ball-front':'fz-ball-front','ball-back':'fz-ball-back','arch-inner':'fz-arch-inner','arch-outer':'fz-arch-outer',mid:'fz-mid',heel:'fz-heel',achilles:'fz-achilles',top:'fz-top','ankle-front':'fz-af','ankle-back':'fz-ab','ankle-inner':'fz-ai','ankle-outer':'fz-ao'};
 const PC=[null,['#16A34A','#f0fdf4'],['#16A34A','#f0fdf4'],['#D97706','#fffbeb'],['#D97706','#fffbeb'],['#EA580C','#fff7ed'],['#EA580C','#fff7ed'],['#DC2626','#fef2f2'],['#DC2626','#fef2f2'],['#991B1B','#450a0a'],['#991B1B','#450a0a']];
 const DAYS=['일','월','화','수','목','금','토'];
 const HC=['#bbf7d0','#fef08a','#fed7aa','#fca5a5','#f87171'];
 const ALL_ZONES=['toe1','toe2','toe3','toe4','toe5','gap1','gap2','gap3','gap4','ball-front','ball-back','arch-inner','arch-outer','mid','heel','achilles','top','ankle-front','ankle-back','ankle-inner','ankle-outer'];
+const ALL_HAND_ZONES=['hfinger1','hfinger2','hfinger3','hfinger4','hfinger5','hgap1','hgap2','hgap3','hgap4','hball','hmid','hpalm','hback','hthumb-base','hwrist-front','hwrist-back','hwrist-inner','hwrist-outer'];
 
 let recs=[],hosps=[],DB=null;
 let curGraphRange=7;
+let bodyPart='foot'; // 'foot' | 'hand'
 let selZ=new Set(); // 현재 탭 선택된 zones
 let zonePain={}; // {zoneId: painLevel} 부위별 통증
 let footData={
@@ -702,9 +829,9 @@ let footData={
   right:{zones:new Set(),zpain:{},pain:5,painSet:false}
 };
 let curFoot='left';
-let zpopZone=null; // 현재 팝업에서 처리중인 zone
+let zpopZone=null,zpopMode='log'; // 현재 팝업에서 처리중인 zone
 let hv='cal',calY=new Date().getFullYear(),calM=new Date().getMonth(),calSel=null,openDays=new Set();
-let editId=null,eFoot='left',eDelConf=false;
+let editId=null,eFoot='left',eDelConf=false,editZonePain={};
 let hospEditId=null,hDept='',hDelConf=false;
 let aiPeriod='day',aiResult='';
 
@@ -800,7 +927,7 @@ function fromHospRow(h){
 function p2(n){return String(n).padStart(2,'0');}
 function fgc(p){return PC[p]?PC[p][0]:'#a09b96';}
 function bgc(p){return PC[p]?PC[p][1]:'#f0ede6';}
-function flabel(f){return{left:'왼발',right:'오른발',both:'양쪽'}[f]||f;}
+function flabel(f,bp){const isHand=bp==='hand';return{left:isHand?'왼손':'왼발',right:isHand?'오른손':'오른발',both:isHand?'양손':'양발'}[f]||f;}
 function fmtT(ts){return new Date(ts).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});}
 function fmtD(ts){
   const d=new Date(ts),n=new Date(),y=new Date(n);y.setDate(n.getDate()-1);
@@ -845,6 +972,28 @@ function showPage(name){
 }
 
 // ── 기록 폼 ──
+function setBodyPart(part){
+  bodyPart=part;
+  ['foot','hand'].forEach(p=>{
+    const el=document.getElementById('bp-'+p);
+    if(!el)return;
+    if(p===part){el.style.background='var(--dark)';el.style.color='#fff';}
+    else{el.style.background='transparent';el.style.color='var(--ink3)';}
+  });
+  // SVG 영역 전환
+  document.getElementById('foot-svg-wrap').style.display=part==='foot'?'flex':'none';
+  document.getElementById('hand-svg-wrap').style.display=part==='hand'?'flex':'none';
+  // 부위 칩 전환
+  document.getElementById('foot-zone-chips').style.display=part==='foot'?'':'none';
+  document.getElementById('hand-zone-chips').style.display=part==='hand'?'':'none';
+  // 발탭 전환 버튼
+  document.getElementById('foot-tab-wrap').style.display=part==='foot'?'block':'none';
+  // 타이틀
+  document.getElementById('foot-zone-title').textContent=(part==='foot'?'왼발':'왼손')+' · 아픈 부위';
+  // selZ, zonePain 초기화
+  selZ=new Set();zonePain={};
+}
+
 function switchFoot(f){
   // 현재 탭 데이터 저장
   saveCurFootData();
@@ -923,11 +1072,16 @@ function copyFromLeft(){
 
 function setFoot(f){switchFoot(f);} // 하위호환
 function getSVGEl(id){
-  // 현재 발 탭에 맞는 SVG 요소 찾기
-  const prefix=curFoot==='left'?'fz-left-':'fz-';
+  if(bodyPart==='hand'){
+    // 손 SVG 요소
+    const isLeft=curFoot==='left';
+    const leftId='hfz-left-'+id;
+    const rightId='hfz-'+id;
+    return isLeft?document.getElementById(leftId):document.getElementById(rightId);
+  }
+  // 발 SVG
   const svKey=SVGM[id];
   if(!svKey)return null;
-  // left SVG는 fz-left- 접두사, right는 fz-
   const leftId=svKey.replace('fz-','fz-left-');
   const el=curFoot==='left'?document.getElementById(leftId):document.getElementById(svKey);
   return el;
@@ -956,13 +1110,27 @@ function onZPopSlide(v){
 function confirmZonePop(){
   if(!zpopZone)return;
   const pain=+document.getElementById('zpop-slider').value;
-  selZ.add(zpopZone);
-  zonePain[zpopZone]=pain;
-  const el=getSVGEl(zpopZone);if(el)el.setAttribute('data-on','1');
-  document.getElementById('zc-'+zpopZone)?.classList.add('on');
-  updZoneChipPain(zpopZone,pain);
+  if(zpopMode==='edit'){
+    // 수정 모달
+    editZonePain[zpopZone]=pain;
+    const zEl=document.getElementById('e-zones');
+    const chip=zEl?.querySelector(`[data-z="${zpopZone}"]`);
+    if(chip){
+      chip.classList.add('on');
+      let badge=chip.querySelector('.zc-pain');
+      if(!badge){badge=document.createElement('span');badge.className='zc-pain';chip.appendChild(badge);}
+      badge.textContent=pain;badge.style.background=bgc(pain);badge.style.color=fgc(pain);
+    }
+  } else {
+    // 기록 폼
+    selZ.add(zpopZone);
+    zonePain[zpopZone]=pain;
+    const el=getSVGEl(zpopZone);if(el)el.setAttribute('data-on','1');
+    document.getElementById('zc-'+zpopZone)?.classList.add('on');
+    updZoneChipPain(zpopZone,pain);
+  }
   document.getElementById('zone-popup').classList.remove('show');
-  zpopZone=null;
+  zpopZone=null;zpopMode='log';
 }
 function cancelZonePop(){
   document.getElementById('zone-popup').classList.remove('show');
@@ -998,19 +1166,21 @@ async function saveRec(){
   const feetToSave=(['left','right']).filter(f=>footData[f].zones.size>0);
   if(!feetToSave.length){toast('아픈 부위를 선택해주세요');return;}
   const saved=[];
-  for(const f of feetToSave){
+  const baseId=Date.now();
+  for(let fi=0;fi<feetToSave.length;fi++){
+    const f=feetToSave[fi];
     const zones=[...footData[f].zones];
-    // 부위별 통증 평균을 대표 통증으로
     const zpainVals=Object.values(footData[f].zpain||{});
     const avgPain=zpainVals.length
       ? Math.round(zpainVals.reduce((s,v)=>s+v,0)/zpainVals.length*10)/10
       : footData[f].pain;
-    const rec={id:Date.now()+(f==='right'?1:0),ts,foot:f,zones,zoneLabels:zones.map(z=>ZL[z]||z),pain:avgPain,zonePain:{...(footData[f].zpain||{})},types,situations:sits,note};
+    const rec={id:baseId+fi,ts,foot:f,bodyPart:bodyPart,zones,zoneLabels:zones.map(z=>ZL[z]||z),pain:avgPain,zonePain:{...(footData[f].zpain||{})},types,situations:sits,note};
     saved.push(rec);
     recs.unshift(rec);
   }
-  // 저장
+  // localStorage 먼저
   localStorage.setItem('fp3',JSON.stringify(recs));
+  // Supabase 순차 저장 (동시 저장 시 충돌 방지)
   for(const rec of saved){
     try{await sbUpsert('records',toRow(rec));}catch(e){console.error('저장 실패',e);}
   }
@@ -1041,7 +1211,7 @@ function quickCopy(){
 // ── 홈 ──
 function setGraphRange(days){
   curGraphRange=days;
-  [7,30,90].forEach(d=>{
+  [1,7,30].forEach(d=>{
     const el=document.getElementById('gt-'+d);
     if(el)el.classList.toggle('on',d===days);
   });
@@ -1281,13 +1451,38 @@ function openEdit(id){
   document.getElementById('e-pain').value=r.pain;updEPain(r.pain);
   document.getElementById('e-note').value=r.note||'';
   eFoot=r.foot||'left';setEFoot(eFoot);
-  // zones
+  // zones + 부위별 통증
+  editZonePain={...(r.zonePain||{})};
   const zEl=document.getElementById('e-zones');
-  zEl.innerHTML=ALL_ZONES.map(z=>`<div class="zc${(r.zones||[]).includes(z)?' on':''}" data-z="${z}" onclick="this.classList.toggle('on')"><div class="zdot"></div>${ZL[z]||z}</div>`).join('');
+  zEl.innerHTML=ALL_ZONES.map(z=>{
+    const on=(r.zones||[]).includes(z);
+    const p=editZonePain[z];
+    const badge=p?`<span class="zc-pain" style="background:${bgc(p)};color:${fgc(p)};">${p}</span>`:'';
+    return `<div class="zc${on?' on':''}" data-z="${z}" onclick="eZoneClick('${z}')"><div class="zdot"></div>${ZL[z]||z}${badge}</div>`;
+  }).join('');
   document.querySelectorAll('#e-types .chip').forEach(c=>c.classList.toggle('on',(r.types||[]).includes(c.dataset.v)));
   document.querySelectorAll('#e-sits .schip').forEach(c=>c.classList.toggle('on',(r.situations||[]).includes(c.dataset.v)));
   const db=document.getElementById('e-del-btn');db.textContent='삭제';db.style.background='var(--red-s)';db.style.color='var(--red)';
   document.getElementById('edit-overlay').classList.add('show');
+}
+function eZoneClick(z){
+  const chip=document.getElementById('e-zones').querySelector(`[data-z="${z}"]`);
+  if(!chip)return;
+  if(chip.classList.contains('on')){
+    // 이미 선택 → 해제
+    chip.classList.remove('on');
+    delete editZonePain[z];
+    const badge=chip.querySelector('.zc-pain');if(badge)badge.remove();
+  } else {
+    // 새로 선택 → 팝업
+    zpopZone=z;
+    zpopMode='edit';
+    document.getElementById('zpop-zone-name').textContent=(ZL[z]||z)+' 통증';
+    const prev=editZonePain[z]||5;
+    document.getElementById('zpop-slider').value=prev;
+    onZPopSlide(prev);
+    document.getElementById('zone-popup').classList.add('show');
+  }
 }
 function closeEdit(){document.getElementById('edit-overlay').classList.remove('show');editId=null;eDelConf=false;}
 function setEFoot(f){eFoot=f;['left','right','both'].forEach(x=>document.getElementById('ef-'+x).classList.toggle('on',x===f));}
@@ -1300,11 +1495,14 @@ async function saveEdit(){
   const note=document.getElementById('e-note').value.trim();
   const zones=[...document.querySelectorAll('#e-zones .zc.on')].map(c=>c.dataset.z);
   const zoneLabels=zones.length?zones.map(z=>ZL[z]||z):(recs.find(r=>r.id===editId)?.zoneLabels||[]);
+  // 부위별 통증 평균으로 대표 통증 계산
+  const ezpVals=zones.map(z=>editZonePain[z]).filter(Boolean);
+  const editPain=ezpVals.length?Math.round(ezpVals.reduce((s,v)=>s+v,0)/ezpVals.length*10)/10:+document.getElementById('e-pain').value;
   const types=[...document.querySelectorAll('#e-types .chip.on')].map(c=>c.dataset.v);
   const situations=[...document.querySelectorAll('#e-sits .schip.on')].map(c=>c.dataset.v);
-  recs=recs.map(r=>{if(r.id!==editId)return r;const u={...r,foot:eFoot,pain,note,zones:zones.length?zones:r.zones,zoneLabels,types,situations};if(ts)u.ts=ts;return u;});
-  if(DB)try{await DB.doc('records/'+editId).set(recs.find(r=>r.id===editId));}catch(e){}
-  else localStorage.setItem('fp3',JSON.stringify(recs));
+  recs=recs.map(r=>{if(r.id!==editId)return r;const u={...r,foot:eFoot,pain:editPain,zonePain:{...editZonePain},note,zones:zones.length?zones:r.zones,zoneLabels,types,situations};if(ts)u.ts=ts;return u;});
+  localStorage.setItem('fp3',JSON.stringify(recs));
+  try{await sbUpsert('records',toRow(recs.find(r=>r.id===editId)));}catch(e){console.error('수정 저장 실패',e);}
   closeEdit();renderHome();if(document.getElementById('p-history').classList.contains('show'))renderHistory();
   toast('✓ 수정됐어요!');
 }
