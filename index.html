@@ -690,6 +690,7 @@ let handData={left:{zones:new Set(),zpain:{},pain:5},right:{zones:new Set(),zpai
 let zpopZone=null,zpopMode='log';
 let editId=null,eFoot='left',eDelConf=false,editZonePain={};
 let hospEditId=null,hospDelConf=false,hospBody='foot';
+let hospCalYear=new Date().getFullYear(),hospCalMonth=new Date().getMonth();
 let aiResult='';
 
 // 색상
@@ -1266,7 +1267,6 @@ function confirmDelRec(){
 document.getElementById('edit-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeEdit();});
 
 // ── 병원 ──
-let hospCalYear=new Date().getFullYear(),hospCalMonth=new Date().getMonth();
 
 function hospCalPrev(){hospCalMonth--;if(hospCalMonth<0){hospCalMonth=11;hospCalYear--;}renderHospCal();}
 function hospCalNext(){hospCalMonth++;if(hospCalMonth>11){hospCalMonth=0;hospCalYear++;}renderHospCal();}
