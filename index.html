@@ -171,8 +171,13 @@ textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:10
     <div class="home-greet" id="hgreet">안녕하세요 👋</div>
     <div class="home-time"><span id="htime">00:00:00</span><br><span id="sync-st">💾 로컬저장</span></div>
   </div>
+  <!-- 발목/손목 전환 -->
+  <div style="display:flex;gap:0;margin:10px 16px 0;background:var(--surf2);border-radius:12px;padding:4px;">
+    <div id="ab-foot" onclick="setActiveBody('foot')" style="flex:1;padding:9px;border-radius:9px;text-align:center;font-size:14px;font-weight:700;cursor:pointer;background:var(--dark);color:#fff;transition:all .2s;">🦶 발목</div>
+    <div id="ab-hand" onclick="setActiveBody('hand')" style="flex:1;padding:9px;border-radius:9px;text-align:center;font-size:14px;font-weight:700;cursor:pointer;color:var(--ink3);transition:all .2s;">✋ 손목</div>
+  </div>
   <div class="today-banner">
-    <div class="lbl">오늘 통증 요약</div>
+    <div class="lbl" id="home-body-lbl">🦶 발목 · 오늘 통증 요약</div>
     <div id="today-content"><div style="font-size:14px;opacity:.8;">오늘 기록이 없어요. + 버튼으로 기록해보세요</div></div>
   </div>
   <div class="week-strip" id="week-strip"></div>
@@ -634,6 +639,7 @@ function fromHospRow(h){return{...h,treats:safeJSON(h.treats,[])};}
 
 // ── 전역 변수 ──
 let recs=[],hosps=[];
+let activeBody='foot'; // 'foot' | 'hand' — 현재 보고 있는 신체 부위
 let curGraphRange=7;
 let bodyPart='foot';
 let curFoot='left';
@@ -718,7 +724,7 @@ function showPage(name){
     const n=new Date();
     document.getElementById('rd').value=`${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())}`;
     document.getElementById('rt').value=`${p2(n.getHours())}:${p2(n.getMinutes())}`;
-    setBodyPart('foot');
+    setBodyPart(activeBody);
   }
   if(name==='history')renderHistory();
   if(name==='hosp')renderHosp();
@@ -956,6 +962,20 @@ async function saveRec(){
 }
 
 // ── 홈 ──
+function setActiveBody(part){
+  activeBody=part;
+  ['foot','hand'].forEach(p=>{
+    const el=document.getElementById('ab-'+p);
+    if(!el)return;
+    if(p===part){el.style.background='var(--dark)';el.style.color='#fff';}
+    else{el.style.background='transparent';el.style.color='var(--ink3)';}
+  });
+  // 배너 타이틀 업데이트
+  const lbl=document.getElementById('home-body-lbl');
+  if(lbl)lbl.textContent=(part==='foot'?'🦶 발목':'✋ 손목')+' · 오늘 통증 요약';
+  renderHome();
+}
+
 function setGraphRange(days){
   curGraphRange=days;
   [1,7,30].forEach(d=>{const el=document.getElementById('gt-'+d);if(el)el.classList.toggle('on',d===days);});
@@ -972,7 +992,7 @@ function renderPainGraph(days){
   const buckets=[];
   for(let i=days-1;i>=0;i--){
     const d=new Date(now);d.setDate(now.getDate()-i);
-    const dr=recs.filter(r=>new Date(r.ts).toDateString()===d.toDateString());
+    const dr=recs.filter(r=>(r.bodyPart||'foot')===activeBody&&new Date(r.ts).toDateString()===d.toDateString());
     const avg=dr.length?dr.reduce((s,r)=>s+r.pain,0)/dr.length:null;
     buckets.push({date:d,avg,count:dr.length});
   }
@@ -1029,7 +1049,7 @@ function renderPainGraph(days){
     ctx.fill();ctx.stroke();
   });
   const cutoff=new Date(now);cutoff.setDate(now.getDate()-days);
-  const allPains=recs.filter(r=>new Date(r.ts)>=cutoff).map(r=>r.pain);
+  const allPains=recs.filter(r=>(r.bodyPart||'foot')===activeBody&&new Date(r.ts)>=cutoff).map(r=>r.pain);
   const meta=document.getElementById('graph-meta');
   if(meta&&allPains.length){
     const avg=(allPains.reduce((s,v)=>s+v,0)/allPains.length).toFixed(1);
@@ -1040,7 +1060,8 @@ function renderPainGraph(days){
 
 function renderHome(){
   const tod=new Date().toDateString();
-  const tr=recs.filter(r=>new Date(r.ts).toDateString()===tod);
+  const bodyRecs=recs.filter(r=>(r.bodyPart||'foot')===activeBody);
+  const tr=bodyRecs.filter(r=>new Date(r.ts).toDateString()===tod);
   const tc=document.getElementById('today-content');
   if(tr.length){
     const avg=(tr.reduce((s,r)=>s+r.pain,0)/tr.length).toFixed(1);
@@ -1054,7 +1075,7 @@ function renderHome(){
   const dayNames=['일','월','화','수','목','금','토'];
   for(let i=0;i<7;i++){
     const d=new Date(now);d.setDate(now.getDate()-now.getDay()+i);
-    const dr=recs.filter(r=>new Date(r.ts).toDateString()===d.toDateString());
+    const dr=bodyRecs.filter(r=>new Date(r.ts).toDateString()===d.toDateString());
     const isTod=d.toDateString()===tod;
     const avg=dr.length?dr.reduce((s,r)=>s+r.pain,0)/dr.length:0;
     let sty='';if(dr.length){const hi=Math.min(5,Math.ceil(avg/2));sty=`background:${HC[hi-1]};color:#1c1917;`;}
@@ -1064,7 +1085,7 @@ function renderHome(){
   renderPainGraph(curGraphRange);
   // 최근 기록
   const rl=document.getElementById('home-recs');rl.innerHTML='';
-  const recent=recs.slice(0,5);
+  const recent=bodyRecs.slice(0,5);
   if(!recent.length){rl.innerHTML='<div style="text-align:center;padding:20px;color:var(--ink3);font-size:14px;">아직 기록이 없어요</div>';return;}
   recent.forEach(r=>{
     const painBg=bgc(r.pain),painFg=fgc(r.pain);
@@ -1097,7 +1118,8 @@ function quickCopy(){
 function renderHistory(){
   const q=(document.getElementById('hist-search')?.value||'').toLowerCase();
   const hl=document.getElementById('hist-list');hl.innerHTML='';
-  const filtered=q?recs.filter(r=>(r.zoneLabels||[]).some(z=>z.toLowerCase().includes(q))||(r.note||'').toLowerCase().includes(q)):recs;
+  const activeRecs=recs.filter(r=>(r.bodyPart||'foot')===activeBody);
+  const filtered=q?activeRecs.filter(r=>(r.zoneLabels||[]).some(z=>z.toLowerCase().includes(q))||(r.note||'').toLowerCase().includes(q)):activeRecs;
   if(!filtered.length){hl.innerHTML='<div style="text-align:center;padding:30px;color:var(--ink3);">기록이 없어요</div>';return;}
   let lastDate='';
   filtered.forEach(r=>{
