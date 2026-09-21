@@ -487,7 +487,10 @@ textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:10
 <!-- 병원 -->
 <div class="page" id="p-hosp">
   <div style="padding:20px 16px 0;display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-size:20px;font-weight:700;">병원 기록</div>
+    <div>
+      <div style="font-size:20px;font-weight:700;">병원 기록</div>
+      <div id="hosp-body-lbl" style="font-size:12px;color:var(--acc);margin-top:2px;">🦶 발목</div>
+    </div>
     <button onclick="openHospSheet(null)" style="background:var(--dark);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;">+ 추가</button>
   </div>
   <!-- 병원 달력 -->
@@ -583,6 +586,11 @@ textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:10
     <div class="sheet-title" id="hosp-sheet-title">진료 추가 <button class="sheet-close" onclick="closeHospSheet()">✕</button></div>
     <div class="sheet-lbl">진료일</div>
     <input type="date" id="h-date" class="sheet-input">
+    <div class="sheet-lbl">부위</div>
+    <div style="display:flex;gap:0;background:var(--surf2);border-radius:12px;padding:4px;margin-bottom:8px;">
+      <div id="hb-foot" onclick="setHospBody('foot')" style="flex:1;padding:8px;border-radius:9px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;background:var(--dark);color:#fff;transition:all .15s;">🦶 발목</div>
+      <div id="hb-hand" onclick="setHospBody('hand')" style="flex:1;padding:8px;border-radius:9px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink3);transition:all .15s;">✋ 손목</div>
+    </div>
     <div class="sheet-lbl">진료과</div>
     <input type="text" id="h-dept" class="sheet-input" placeholder="정형외과, 신경외과…">
     <div class="sheet-lbl">병원명</div>
@@ -665,8 +673,8 @@ async function sbDelete(table,id){return sbFetch(table,'DELETE',null,`?id=eq.${i
 function safeJSON(s,def){try{return s?JSON.parse(s):def;}catch(e){return def;}}
 function toRow(r){return{id:r.id,ts:r.ts,foot:r.foot||'left',body_part:r.bodyPart||'foot',zones:JSON.stringify(r.zones||[]),zone_labels:JSON.stringify(r.zoneLabels||[]),zone_pain:JSON.stringify(r.zonePain||{}),pain:r.pain||5,types:JSON.stringify(r.types||[]),situations:JSON.stringify(r.situations||[]),note:r.note||''};}
 function fromRow(r){return{id:r.id,ts:r.ts,foot:r.foot||'left',bodyPart:r.body_part||'foot',zones:safeJSON(r.zones,[]),zoneLabels:safeJSON(r.zone_labels,[]),zonePain:safeJSON(r.zone_pain,{}),pain:r.pain||5,types:safeJSON(r.types,[]),situations:safeJSON(r.situations,[]),note:r.note||''};}
-function toHospRow(h){return{id:h.id,date:h.date,dept:h.dept||'',hospital:h.hospital||'',diag:h.diag||'',body_zones:JSON.stringify(h.bodyZones||[]),treats:JSON.stringify(h.treats||[]),pain:h.pain||0,next:h.next||'',note:h.note||''};}
-function fromHospRow(h){return{...h,treats:safeJSON(h.treats,[]),bodyZones:safeJSON(h.body_zones,[])};}
+function toHospRow(h){return{id:h.id,date:h.date,body_part:h.bodyPart||'foot',dept:h.dept||'',hospital:h.hospital||'',diag:h.diag||'',body_zones:JSON.stringify(h.bodyZones||[]),treats:JSON.stringify(h.treats||[]),pain:h.pain||0,next:h.next||'',note:h.note||''};}
+function fromHospRow(h){return{...h,bodyPart:h.body_part||'foot',treats:safeJSON(h.treats,[]),bodyZones:safeJSON(h.body_zones,[])};}
 
 // ── 전역 변수 ──
 let recs=[],hosps=[];
@@ -681,7 +689,7 @@ let footData={left:{zones:new Set(),zpain:{},pain:5},right:{zones:new Set(),zpai
 let handData={left:{zones:new Set(),zpain:{},pain:5},right:{zones:new Set(),zpain:{},pain:5}};
 let zpopZone=null,zpopMode='log';
 let editId=null,eFoot='left',eDelConf=false,editZonePain={};
-let hospEditId=null,hospDelConf=false;
+let hospEditId=null,hospDelConf=false,hospBody='foot';
 let aiResult='';
 
 // 색상
@@ -1005,6 +1013,10 @@ function setActiveBody(part){
   const lbl=document.getElementById('home-body-lbl');
   if(lbl)lbl.textContent=(part==='foot'?'🦶 발목':'✋ 손목')+' · 오늘 통증 요약';
   renderHome();
+  if(document.getElementById('p-hosp').classList.contains('show'))renderHosp();
+  const hlbl=document.getElementById('hosp-body-lbl');
+  if(hlbl)hlbl.textContent=(part==='foot'?'🦶 발목':'✋ 손목');
+  if(document.getElementById('p-history').classList.contains('show'))renderHistory();
 }
 
 function setGraphRange(days){
@@ -1272,7 +1284,7 @@ function renderHospCal(){
   }
   for(let d=1;d<=last.getDate();d++){
     const dateStr=`${hospCalYear}-${p2(hospCalMonth+1)}-${p2(d)}`;
-    const dayHosps=hosps.filter(h=>h.date===dateStr);
+    const dayHosps=hosps.filter(h=>h.date===dateStr&&(h.bodyPart||'foot')===activeBody);
     const isToday=today.getFullYear()===hospCalYear&&today.getMonth()===hospCalMonth&&today.getDate()===d;
     const hasBg=dayHosps.length?'background:var(--acc);color:#fff;':'';
     const todayBorder=isToday&&!dayHosps.length?'box-shadow:0 0 0 1.5px var(--acc);':'';
@@ -1296,7 +1308,7 @@ function renderHosp(){
   renderHospCompare();
   const hl=document.getElementById('hosp-list');hl.innerHTML='';
   if(!hosps.length){hl.innerHTML='<div style="text-align:center;padding:30px;color:var(--ink3);">병원 기록이 없어요<br><span style="font-size:12px;">+ 추가로 기록해보세요</span></div>';return;}
-  [...hosps].sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(h=>{
+  [...hosps].filter(h=>(h.bodyPart||'foot')===activeBody).sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(h=>{
     const zones=(h.bodyZones||[]).map(z=>`<span class="hosp-tag" style="background:var(--acc-s);color:var(--dark);">${z}</span>`).join('');
     hl.innerHTML+=`<div class="hosp-card" onclick="openHospSheet(${h.id})">
       <div class="hosp-date">${h.date} · ${h.dept||''} ${h.hospital||''}</div>
@@ -1311,7 +1323,7 @@ function renderHosp(){
 
 function renderHospCompare(){
   const hc=document.getElementById('hosp-compare');if(!hosps.length){hc.innerHTML='';return;}
-  const sorted=[...hosps].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const sorted=[...hosps].filter(h=>(h.bodyPart||'foot')===activeBody).sort((a,b)=>new Date(a.date)-new Date(b.date));
   if(sorted.length<2){hc.innerHTML='';return;}
   const first=sorted[0],last=sorted[sorted.length-1];
   const diff=last.pain-first.pain;
@@ -1325,6 +1337,8 @@ function openHospSheet(id){
   const h=id?hosps.find(h=>h.id===id):null;
   document.getElementById('hosp-sheet-title').innerHTML=(id?'진료 수정':'진료 추가')+' <button class="sheet-close" onclick="closeHospSheet()">✕</button>';
   document.getElementById('h-date').value=h?.date||new Date().toISOString().slice(0,10);
+  setHospBody(h?.bodyPart||activeBody);
+  setHospBody(h?.bodyPart||activeBody);
   document.getElementById('h-dept').value=h?.dept||'';
   document.getElementById('h-hosp').value=h?.hospital||'';
   document.getElementById('h-diag').value=h?.diag||'';
@@ -1337,11 +1351,20 @@ function openHospSheet(id){
   document.getElementById('hosp-overlay').classList.add('show');
 }
 
+function setHospBody(part){
+  hospBody=part;
+  ['foot','hand'].forEach(p=>{
+    const el=document.getElementById('hb-'+p);
+    if(!el)return;
+    if(p===part){el.style.background='var(--dark)';el.style.color='#fff';}
+    else{el.style.background='transparent';el.style.color='var(--ink3)';}
+  });
+}
 function closeHospSheet(){document.getElementById('hosp-overlay').classList.remove('show');hospEditId=null;}
 function updHPain(v){const b=document.getElementById('h-pain-badge');b.textContent=v;b.style.background=bgc(v);b.style.color=fgc(v);}
 
 async function saveHosp(){
-  const h={id:hospEditId||Date.now(),date:document.getElementById('h-date').value,dept:document.getElementById('h-dept').value.trim(),hospital:document.getElementById('h-hosp').value.trim(),diag:document.getElementById('h-diag').value.trim(),bodyZones:[...document.querySelectorAll('#h-body-zones .chip.on')].map(c=>c.dataset.v),treats:[...document.querySelectorAll('#h-treats .chip.on')].map(c=>c.dataset.v),pain:+document.getElementById('h-pain').value,next:document.getElementById('h-next').value,note:document.getElementById('h-note').value.trim()};
+  const h={id:hospEditId||Date.now(),date:document.getElementById('h-date').value,bodyPart:hospBody,dept:document.getElementById('h-dept').value.trim(),hospital:document.getElementById('h-hosp').value.trim(),diag:document.getElementById('h-diag').value.trim(),bodyZones:[...document.querySelectorAll('#h-body-zones .chip.on')].map(c=>c.dataset.v),treats:[...document.querySelectorAll('#h-treats .chip.on')].map(c=>c.dataset.v),pain:+document.getElementById('h-pain').value,next:document.getElementById('h-next').value,note:document.getElementById('h-note').value.trim()};
   if(hospEditId)hosps=hosps.map(x=>x.id===hospEditId?h:x);else hosps.unshift(h);
   localStorage.setItem('fp3h',JSON.stringify(hosps));
   try{await sbUpsert('hosps',toHospRow(h));}catch(e){}
