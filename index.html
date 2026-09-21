@@ -1385,11 +1385,13 @@ document.getElementById('hosp-overlay').addEventListener('click',e=>{if(e.target
 
 // ── AI 분석 ──
 function runAI(){
-  const last30=recs.slice(0,30);
+  const last30=recs.filter(r=>(r.bodyPart||'foot')===activeBody).slice(0,30);
   if(!last30.length){toast('기록이 없어요!');return;}
   const summary=last30.map(r=>`[${fmtD(r.ts)} ${fmtT(r.ts)}] ${flabel(r.foot,r.bodyPart)} ${(r.zoneLabels||[]).join(',')} 통증${r.pain} ${(r.situations||[]).join(' ')}${r.note?' 메모:'+r.note:''}`).join('\n');
-  const hospSummary=hosps.slice(0,5).map(h=>`[${h.date}] ${h.dept||''} ${h.hospital||''} 진단:${h.diag||''} 치료부위:${(h.bodyZones||[]).join(',')} 치료:${(h.treats||[]).join(',')} 통증${h.pain}`).join('\n');
-  const prompt=`당신은 20년 경력의 족부 전문의입니다. 아래 통증 기록을 분석해서 한국어로 답해주세요.\n\n발/손 통증 기록 (최근 30개):\n${summary}\n\n병원 기록:\n${hospSummary||'없음'}\n\n위 기록을 바탕으로:\n1) 통증 패턴 분석\n2) 의심되는 원인\n3) 주의사항 및 권고사항\n을 각각 구체적으로 설명해주세요.`;
+  const activeHosps=hosps.filter(h=>(h.bodyPart||'foot')===activeBody).slice(0,5);
+  const hospSummary=activeHosps.map(h=>`[${h.date}] ${h.dept||''} ${h.hospital||''} 진단:${h.diag||''} 치료부위:${(h.bodyZones||[]).join(',')} 치료:${(h.treats||[]).join(',')} 통증${h.pain}`).join('\n');
+  const bodyLabel=activeBody==='foot'?'발목/발':'손목/손';
+  const prompt=`당신은 20년 경력의 족부·수부 전문의입니다. 아래 ${bodyLabel} 통증 기록을 분석해서 한국어로 답해주세요.\n\n${bodyLabel} 통증 기록 (최근 ${last30.length}개):\n${summary}\n\n병원 기록:\n${hospSummary||'없음'}\n\n위 기록을 바탕으로:\n1) 통증 패턴 분석\n2) 의심되는 원인\n3) 주의사항 및 권고사항\n을 각각 구체적으로 설명해주세요.`;
   const area=document.getElementById('ai-area');
   const showResult=()=>{
     area.innerHTML=`<div class="card" style="margin-top:12px;"><div class="card-body">
