@@ -1034,11 +1034,24 @@ function renderPainGraph(days){
   const w=W,h=80;
   const now=new Date();
   const buckets=[];
-  for(let i=days-1;i>=0;i--){
-    const d=new Date(now);d.setDate(now.getDate()-i);
-    const dr=recs.filter(r=>(r.bodyPart||'foot')===activeBody&&new Date(r.ts).toDateString()===d.toDateString());
-    const avg=dr.length?dr.reduce((s,r)=>s+r.pain,0)/dr.length:null;
-    buckets.push({date:d,avg,count:dr.length});
+  if(days===1){
+    // 오늘: 시간대별 (1시간 단위)
+    for(let h=0;h<24;h++){
+      const dr=recs.filter(r=>{
+        const d=new Date(r.ts);
+        return (r.bodyPart||'foot')===activeBody&&d.toDateString()===now.toDateString()&&d.getHours()===h;
+      });
+      const avg=dr.length?dr.reduce((s,r)=>s+r.pain,0)/dr.length:null;
+      const d=new Date(now);d.setHours(h,0,0,0);
+      buckets.push({date:d,avg,count:dr.length,hour:h});
+    }
+  } else {
+    for(let i=days-1;i>=0;i--){
+      const d=new Date(now);d.setDate(now.getDate()-i);
+      const dr=recs.filter(r=>(r.bodyPart||'foot')===activeBody&&new Date(r.ts).toDateString()===d.toDateString());
+      const avg=dr.length?dr.reduce((s,r)=>s+r.pain,0)/dr.length:null;
+      buckets.push({date:d,avg,count:dr.length});
+    }
   }
   const validB=buckets.filter(b=>b.avg!==null);
   if(!validB.length){
@@ -1053,12 +1066,13 @@ function renderPainGraph(days){
     ctx.fillStyle='#bbb';ctx.font='8px -apple-system,sans-serif';ctx.textAlign='left';
     ctx.fillText(v,2,y+3);
   });
-  const labelStep=days<=1?1:days<=7?1:days<=30?5:15;
+  const labelStep=days===1?3:days<=7?1:days<=30?5:15;
   ctx.fillStyle='#999';ctx.font='8px -apple-system,sans-serif';ctx.textAlign='center';
   buckets.forEach((b,i)=>{
     if(i%labelStep===0||i===buckets.length-1){
       const x=14+(i/(buckets.length-1||1))*(w-20);
-      ctx.fillText(`${b.date.getMonth()+1}/${b.date.getDate()}`,x,h);
+      const lbl=days===1?`${b.date.getHours()}시`:`${b.date.getMonth()+1}/${b.date.getDate()}`;
+      ctx.fillText(lbl,x,h);
     }
   });
   const grad=ctx.createLinearGradient(0,0,0,h-12);
@@ -1092,7 +1106,8 @@ function renderPainGraph(days){
     ctx.fillStyle=isToday?'#B86A48':'#fff';ctx.strokeStyle='#B86A48';ctx.lineWidth=1.5;
     ctx.fill();ctx.stroke();
   });
-  const cutoff=new Date(now);cutoff.setDate(now.getDate()-days);
+  const cutoff=new Date(now);
+  if(days===1){cutoff.setHours(0,0,0,0);}else{cutoff.setDate(now.getDate()-days);}
   const allPains=recs.filter(r=>(r.bodyPart||'foot')===activeBody&&new Date(r.ts)>=cutoff).map(r=>r.pain);
   const meta=document.getElementById('graph-meta');
   if(meta&&allPains.length){
