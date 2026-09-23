@@ -16,6 +16,21 @@
 
 처음 적용 순서: ① 이 index.html 배포 → ② Supabase Authentication → Users → **Add user** (이메일·비밀번호, Auto Confirm) → UUID 복사 → ③ `security.sql` 의 `<MY_USER_ID>` 두 곳에 넣고 SQL Editor 실행 → ④ 앱에서 로그인해 기록이 보이는지 확인.
 
+### 비밀번호를 잊었을 때 / 대시보드에서 만든 사용자가 로그인 안 될 때
+
+대시보드의 "Create new user" 가 비밀번호를 저장하지 않는 경우가 있다 (2026-09-23 실제 발생). SQL Editor 에서 직접 설정하면 확실하다:
+
+```sql
+update auth.users
+set encrypted_password = crypt('새비밀번호', gen_salt('bf')),
+    email_confirmed_at  = coalesce(email_confirmed_at, now()),
+    updated_at          = now()
+where email = '내이메일';
+```
+
+사용자를 지우고 새로 만들었다면 UID 가 바뀌므로 기록 소유자도 옮겨야 한다:
+`update public.records set user_id = '<새 UID>'; update public.hosps set user_id = '<새 UID>';`
+
 ## 🔧 앱 수정 방법
 
 ### 1단계 - Claude에게 수정 요청
