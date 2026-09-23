@@ -160,16 +160,41 @@ textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:10
 .home-header{padding:18px 16px 0;display:flex;justify-content:space-between;align-items:flex-start;}
 .home-greet{font-size:20px;font-weight:700;}
 .home-time{font-size:11px;color:var(--ink3);text-align:right;line-height:1.6;}
+
+/* ── 로그인 게이트 ── */
+[hidden]{display:none!important;}
+.auth-gate{position:fixed;inset:0;z-index:1000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px 16px;}
+.auth-card{width:100%;max-width:340px;background:var(--surf);border:1px solid var(--border);border-radius:var(--r);padding:28px 22px 22px;display:grid;gap:10px;}
+.auth-emoji{font-size:40px;text-align:center;line-height:1;}
+.auth-title{font-size:20px;font-weight:700;text-align:center;color:var(--ink);}
+.auth-sub{font-size:13px;color:var(--ink2);text-align:center;margin-bottom:8px;}
+.auth-card .sheet-input{width:100%;font-size:15px;}
+.auth-card .btn-save{width:100%;margin-top:4px;}
+.auth-err{min-height:18px;font-size:12.5px;color:var(--red);text-align:center;}
+.auth-note{font-size:11.5px;color:var(--ink3);text-align:center;line-height:1.6;}
+.auth-out{font:inherit;font-size:11px;color:var(--ink3);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;}
 </style>
 </head>
 <body>
+<div id="auth-gate" class="auth-gate" hidden>
+  <form class="auth-card" id="auth-form" autocomplete="on">
+    <div class="auth-emoji">👣</div>
+    <div class="auth-title">발 통증 일기</div>
+    <div class="auth-sub">건강 기록이라 본인 확인 후 불러와요</div>
+    <input class="sheet-input" id="auth-email" type="email" placeholder="이메일" autocomplete="username" required>
+    <input class="sheet-input" id="auth-pw" type="password" placeholder="비밀번호" autocomplete="current-password" required>
+    <button class="btn-save" id="auth-btn" type="submit">로그인</button>
+    <div class="auth-err" id="auth-err"></div>
+    <div class="auth-note">계정은 Supabase 대시보드에서만 만들 수 있어요.<br>이 기기에 로그인 상태가 유지됩니다.</div>
+  </form>
+</div>
 <div id="app">
 
 <!-- 홈 페이지 -->
 <div class="page show" id="p-home">
   <div class="home-header">
     <div class="home-greet" id="hgreet">안녕하세요 👋</div>
-    <div class="home-time"><span id="htime">00:00:00</span><br><span id="sync-st">💾 로컬저장</span></div>
+    <div class="home-time"><span id="htime">00:00:00</span><br><span id="sync-st">💾 로컬저장</span><br><button type="button" class="auth-out" onclick="signOut()">로그아웃</button></div>
   </div>
   <!-- 발목/손목 전환 -->
   <div style="display:flex;gap:0;margin:10px 16px 0;background:var(--surf2);border-radius:12px;padding:4px;">
@@ -659,10 +684,44 @@ textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:10
 const SB_URL='https://wblndotsbuejihjembjz.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndibG5kb3RzYnVlamloamVtYmp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MTczODksImV4cCI6MjEwNTQ5MzM4OX0.BvPUSn3afCpe5LkhIcygwENtf6pNZPGfvRDLR2Q1eBQ';
 
+// ── 인증 (Supabase Auth · 이메일+비밀번호) ──
+// anon 키는 '문 앞까지' 만 열어주는 키다. 데이터는 로그인한 사용자의 access_token 으로만 읽고 쓴다 (테이블 RLS: 본인 행만).
+const AUTH_KEY='fp3auth';
+let session=safeJSON(localStorage.getItem(AUTH_KEY),null);
+function saveSession(s){session=s;if(s)localStorage.setItem(AUTH_KEY,JSON.stringify(s));else localStorage.removeItem(AUTH_KEY);}
+async function authPost(path,body,token){
+  const headers={'apikey':SB_KEY,'Content-Type':'application/json'};
+  if(token)headers['Authorization']='Bearer '+token;
+  const res=await fetch(`${SB_URL}/auth/v1/${path}`,{method:'POST',headers,body:JSON.stringify(body)});
+  const j=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(j.msg||j.error_description||j.error||('HTTP '+res.status));
+  return j;
+}
+const packSession=j=>({access_token:j.access_token,refresh_token:j.refresh_token,expires_at:Date.now()+((j.expires_in||3600)*1000),email:j.user&&j.user.email});
+async function signIn(email,pw){saveSession(packSession(await authPost('token?grant_type=password',{email,password:pw})));}
+async function getToken(){
+  if(!session){showGate();throw new Error('로그인 필요');}
+  if(Date.now()>session.expires_at-60000){                 // 만료 1분 전이면 갱신
+    try{saveSession(packSession(await authPost('token?grant_type=refresh_token',{refresh_token:session.refresh_token})));}
+    catch(e){saveSession(null);showGate();throw e;}
+  }
+  return session.access_token;
+}
+async function signOut(){
+  try{if(session)await authPost('logout',{},session.access_token);}catch(e){}
+  saveSession(null);
+  localStorage.removeItem('fp3');localStorage.removeItem('fp3h');   // 이 기기의 캐시도 지운다
+  location.reload();
+}
+function showGate(){document.getElementById('auth-gate').hidden=false;document.getElementById('app').style.display='none';}
+function hideGate(){document.getElementById('auth-gate').hidden=true;document.getElementById('app').style.display='';}
+
 async function sbFetch(table,method='GET',body=null,query='',prefer=''){
-  const headers={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+  const token=await getToken();
+  const headers={'apikey':SB_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'};
   if(prefer)headers['Prefer']=prefer;
   const res=await fetch(`${SB_URL}/rest/v1/${table}${query}`,{method,headers,body:body?JSON.stringify(body):null});
+  if(res.status===401){saveSession(null);showGate();}
   if(!res.ok){const t=await res.text();throw new Error(t);}
   return method==='GET'?res.json():true;
 }
@@ -729,8 +788,8 @@ const SVGM={
   'ankle-front':'fz-af','ankle-back':'fz-ab','ankle-inner':'fz-ai','ankle-outer':'fz-ao'
 };
 
-// ── 초기화 ──
-(async()=>{
+// ── 초기화 (로그인 후 실행) ──
+async function boot(){
   recs=JSON.parse(localStorage.getItem('fp3')||'[]');
   hosps=JSON.parse(localStorage.getItem('fp3h')||'[]');
   renderHome();renderHosp();
@@ -744,7 +803,20 @@ const SVGM={
   }catch(e){console.error('Supabase 연결 실패:',e);document.getElementById('sync-st').textContent='💾 로컬저장';}
   renderHome();renderHosp();
   tick();setInterval(tick,1000);
-})();
+}
+
+document.getElementById('auth-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=document.getElementById('auth-btn'),err=document.getElementById('auth-err');
+  btn.disabled=true;btn.textContent='확인 중…';err.textContent='';
+  try{
+    await signIn(document.getElementById('auth-email').value.trim(),document.getElementById('auth-pw').value);
+    hideGate();boot();
+  }catch(ex){
+    err.textContent=/invalid|credentials/i.test(ex.message)?'이메일 또는 비밀번호가 틀렸어요':'로그인 실패: '+ex.message;
+  }finally{btn.disabled=false;btn.textContent='로그인';}
+});
+if(session){hideGate();boot();}else{showGate();}
 
 function tick(){
   const n=new Date(),h=n.getHours();

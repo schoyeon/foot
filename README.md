@@ -6,6 +6,16 @@
 
 ---
 
+## 🔐 보안 (2026-09-23 추가)
+
+기록은 **로그인한 본인만** 읽고 쓸 수 있다.
+
+- 앱: 이메일+비밀번호 로그인. 데이터 요청은 anon 키가 아니라 로그인 토큰으로 나간다. 로그인 상태는 기기에 유지되고, "로그아웃"을 누르면 이 기기의 캐시도 지운다.
+- DB: `security.sql` — `user_id` 컬럼 + RLS "본인 행만" 정책 + anon 권한 회수.
+- 계정은 Supabase 대시보드에서만 만든다 (앱에 가입 기능 없음). **Authentication → Sign In / Providers → Email → "Allow new users to sign up" 을 꺼둘 것.**
+
+처음 적용 순서: ① 이 index.html 배포 → ② Supabase Authentication → Users → **Add user** (이메일·비밀번호, Auto Confirm) → UUID 복사 → ③ `security.sql` 의 `<MY_USER_ID>` 두 곳에 넣고 SQL Editor 실행 → ④ 앱에서 로그인해 기록이 보이는지 확인.
+
 ## 🔧 앱 수정 방법
 
 ### 1단계 - Claude에게 수정 요청
